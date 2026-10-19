@@ -1,4 +1,4 @@
-import type { CityName } from './cities.ts'
+import type { CategoryKey } from './categories.ts'
 
 export type SajuFormInput = {
   nickname: string
@@ -10,6 +10,7 @@ export type SajuFormInput = {
   hour: number // 0~23
   minute: number // 0~59
   timeUnknown: boolean
-  city: CityName
-  gender: '남' | '여'
+  gender: '남' | '여' | null
+  category: CategoryKey | null
+  consent: boolean
 }

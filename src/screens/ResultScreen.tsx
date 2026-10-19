@@ -5,7 +5,6 @@ import buttonBack from '../assets/button-back.svg'
 import infoIcon from '../assets/icon-info.svg'
 import { DetailModal } from '../components/DetailModal'
 import { STEM_CHARACTER } from '../lib/characters'
-import { CITIES } from '../lib/cities'
 import { BRANCH_ANIMAL, ELEMENT_COLOR, ELEMENT_COLOR_WORD, ELEMENT_ORDER, ELEMENT_OUTLINE_COLOR } from '../lib/elements'
 import { SINSAL_GLOSSARY, TEN_GOD_GLOSSARY } from '../lib/glossary'
 import { computeSaju } from '../lib/sajuPipeline'
@@ -30,7 +29,6 @@ export function ResultScreen({ input }: Props) {
   const [modal, setModal] = useState<'tenGods' | 'sinsal' | null>(null)
   const computation = useMemo(() => computeSaju(input), [input])
   const { result, timeUnknown, solarDate } = computation
-  const city = CITIES.find((c) => c.name === input.city) ?? CITIES[0]
 
   const dayDetail = result.pillarDetails.day
   const dayBadgeText = `${ELEMENT_COLOR_WORD[dayDetail.element.stem]} ${BRANCH_ANIMAL[dayDetail.branchKo]}`
@@ -65,7 +63,7 @@ export function ResultScreen({ input }: Props) {
           <h1 className="font-['Mona12'] text-[32px] font-bold tracking-[1.28px]">{input.nickname}의 만세력</h1>
           <p className="font-['Pretendard'] text-[14px] tracking-[-0.15px] text-[#b1b1b1]">
             {solarDate.year}.{String(solarDate.month).padStart(2, '0')}.{String(solarDate.day).padStart(2, '0')} (
-            {input.calendarType === 'solar' ? '양' : '음'}) {timeLabel} · {input.gender} · {city.displayName}
+            {input.calendarType === 'solar' ? '양' : '음'}) {timeLabel} · {input.gender}
           </p>
         </div>
 
@@ -221,7 +219,8 @@ export function ResultScreen({ input }: Props) {
             <span>※</span> <span className="font-['Pretendard']">연주는 1월 1일이 아니라 입춘(2월 초)을 기준으로 바뀌어요.</span>
           </p>
           <p className="text-center text-[12px] text-[#888]">
-            <span>※</span> <span className="font-['Pretendard']">진태양시 보정 경계 시각 근처에서는 시주가 달라질 수 있어요.</span>
+            <span>※</span>{' '}
+            <span className="font-['Pretendard']">태어난 시각은 서울 기준으로 보정했어요. 경계 시각 근처에서는 시주가 달라질 수 있어요.</span>
           </p>
           {timeUnknown && (
             <p className="text-center text-[12px] text-[#888]">

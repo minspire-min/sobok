@@ -12,7 +12,7 @@ export function PixelButton({ variant = 'primary', className = '', children, ...
 
   return (
     <button
-      className={`relative flex h-[62px] w-full items-center justify-center active:translate-y-[2px] ${className}`}
+      className={`relative flex h-[62px] w-full items-center justify-center active:translate-y-[2px] disabled:opacity-40 disabled:active:translate-y-0 ${className}`}
       {...props}
     >
       <span className="absolute inset-[-6.45%_-1.16%_-19.35%_-1.16%]">

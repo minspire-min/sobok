@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import heart from '../assets/heart.png'
 import { Bezel } from '../components/Bezel'
+import { DetailModal } from '../components/DetailModal'
+import { Loading } from '../components/Loading'
 import { PixelButton } from '../components/PixelButton'
 import { PixelCheckbox } from '../components/PixelCheckbox'
-import { PixelSelect } from '../components/PixelSelect'
 import { TimePickerModal } from '../components/TimePickerModal'
-import { CITIES, DEFAULT_CITY } from '../lib/cities'
+import { CATEGORIES } from '../lib/categories'
 import { formatKoreanTime } from '../lib/time'
 import { formatDateInput, parseDateText } from '../lib/textInputs'
 import type { SajuFormInput } from '../lib/types'
@@ -22,8 +23,9 @@ function makeDefaultInput(): SajuFormInput {
     hour: 0,
     minute: 0,
     timeUnknown: false,
-    city: DEFAULT_CITY,
-    gender: '여',
+    gender: null,
+    category: null,
+    consent: false,
   }
 }
 
@@ -31,28 +33,24 @@ type Props = {
   onSubmit: (input: SajuFormInput) => void
 }
 
-// Figma 2:5 — 필드 구성/순서를 그대로 따른다: 닉네임 → 성별 → 생년월일 → 양음력/윤달 →
-// 시각 → 시간모름 → 출생지 → 확인하기
+// Figma 73:914 — 필드 구성/순서를 그대로 따른다: 닉네임 → 성별 → 생년월일 → 양음력/윤달 →
+// 시각 → 시간모름 → 고민 카테고리 → 확인하기
 export function MainInputScreen({ onSubmit }: Props) {
   const [input, setInput] = useState<SajuFormInput>(makeDefaultInput)
   const [dateText, setDateText] = useState('')
   const [timePicked, setTimePicked] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [touched, setTouched] = useState(false)
+  const [showConsent, setShowConsent] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const parsedDate = parseDateText(dateText)
   const realismErrors = validateForm(input)
 
-  const dateError = !dateText.trim()
-    ? '생년월일을 입력해 주세요'
-    : !parsedDate
-      ? '1990.01.01 형식으로 입력해 주세요'
-      : (realismErrors.date ?? null)
-  const timeError = input.timeUnknown
-    ? null
-    : !timePicked
-      ? '시각을 입력하거나 시간 모름을 체크해 주세요'
-      : null
+  // PRD v2 §3.4 R4 — 6개 필수 항목이 전부 채워져야 [확인하기]가 활성화된다. 에러 메시지는 표시하지 않는다.
+  const dateOk = Boolean(parsedDate) && !realismErrors.date
+  const timeOk = input.timeUnknown || timePicked
+  const canSubmit =
+    !realismErrors.nickname && input.gender !== null && dateOk && timeOk && input.category !== null && input.consent
 
   function update<K extends keyof SajuFormInput>(key: K, value: SajuFormInput[K]) {
     setInput((prev) => {
@@ -75,9 +73,13 @@ export function MainInputScreen({ onSubmit }: Props) {
     setInput((prev) => ({ ...prev, calendarType: type, isLeapMonth: false }))
   }
 
-  function handleSubmit() {
-    setTouched(true)
-    if (realismErrors.nickname || dateError || timeError) return
+  // PRD v2 §3.5 R5 — 서버 저장(R12)이 아직 없어 실제로 기다릴 일이 없지만, 결과 화면 전환 전
+  // 로딩이 최소 1초(로티 한 바퀴)는 보이도록 한다. R12에서 저장 API가 생기면 이 지연과
+  // Promise.all로 묶어서 실패 시 토스트 + 입력값 유지 처리를 추가한다.
+  async function handleSubmit() {
+    if (!canSubmit || submitting) return
+    setSubmitting(true)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
     onSubmit(input)
   }
 
@@ -100,7 +102,6 @@ export function MainInputScreen({ onSubmit }: Props) {
               className="w-full bg-transparent text-[16px] tracking-[1.28px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
             />
           </Bezel>
-          {touched && realismErrors.nickname && <p className="mt-1 text-[12px] text-[#ff6b9d]">{realismErrors.nickname}</p>}
         </div>
 
         <div className="flex w-full gap-5">
@@ -136,7 +137,6 @@ export function MainInputScreen({ onSubmit }: Props) {
                 className="w-full bg-transparent text-[16px] tracking-[3.2px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
               />
             </Bezel>
-            {touched && dateError && <p className="mt-1 text-[12px] text-[#ff6b9d]">{dateError}</p>}
           </div>
 
           <div className="mt-4 flex w-full gap-4">
@@ -175,7 +175,6 @@ export function MainInputScreen({ onSubmit }: Props) {
               </button>
               <span aria-hidden className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-['Mona10'] text-[#101010]">▼</span>
             </Bezel>
-            {touched && timeError && <p className="mt-1 text-[12px] text-[#ff6b9d]">{timeError}</p>}
           </div>
           {pickerOpen && (
             <TimePickerModal
@@ -201,25 +200,65 @@ export function MainInputScreen({ onSubmit }: Props) {
           </div>
         </div>
 
-        <Bezel className="h-[48px] w-full">
-          <PixelSelect
-            value={input.city}
-            onChange={(e) => update('city', e.target.value as SajuFormInput['city'])}
-            className="absolute inset-0 w-full px-4 tracking-[1.28px]"
-          >
-            {CITIES.map((c) => (
-              <option key={c.name} value={c.name}>
-                {c.displayName}
-              </option>
+        <div className="flex flex-col items-start gap-4">
+          <p className="font-['Pretendard'] text-[16px] text-white">요즘 고민 중인 카테고리를 선택해 주세요.</p>
+          <div className="flex flex-wrap gap-x-3 gap-y-[14px]">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => update('category', c.key)}
+                className={`relative rounded-[4px] px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[16px] tracking-[1.28px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
+                  input.category === c.key ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
+                }`}
+              >
+                {c.label}
+              </button>
             ))}
-          </PixelSelect>
-          <span aria-hidden className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-['Mona10'] text-[#101010]">▼</span>
-        </Bezel>
+          </div>
+        </div>
+
+        <div className="flex w-full items-center gap-4">
+          <PixelCheckbox
+            id="consent"
+            label="개인정보 수집 및 활용을 동의합니다."
+            checked={input.consent}
+            onChange={(e) => update('consent', e.target.checked)}
+          />
+          <button
+            type="button"
+            onClick={() => setShowConsent(true)}
+            className="shrink-0 text-[14px] text-white underline underline-offset-2"
+          >
+            전문 보기
+          </button>
+        </div>
       </div>
 
       <div className="w-full max-w-[345px]">
-        <PixelButton onClick={handleSubmit}>확인하기</PixelButton>
+        <PixelButton onClick={handleSubmit} disabled={!canSubmit || submitting}>
+          확인하기
+        </PixelButton>
       </div>
+
+      {submitting && <Loading />}
+
+      {showConsent && (
+        <DetailModal title="개인정보 수집 및 활용 동의" onClose={() => setShowConsent(false)}>
+          <div className="flex flex-col gap-4 text-[14px] text-[#101010]">
+            <div className="flex flex-col gap-1">
+              <p className="font-['Pretendard'] font-bold">[개인정보 수집 및 이용에 대한 동의]</p>
+              <p className="font-['Pretendard']">- 수집 및 이용 주체: 윤민지(민지민)</p>
+              <p className="font-['Pretendard']">- 개인정보 수집·이용 목적: 사주 만세력 확인 및 사주/부적 분석 활용</p>
+              <p className="font-['Pretendard']">- 수집하는 개인정보 항목: 이름/닉네임, 성별, 생년월일시, 고민 카테고리</p>
+              <p className="font-['Pretendard']">- 개인정보 보유 및 이용 기간: 15일 내 전체 폐기</p>
+            </div>
+            <p className="font-['Pretendard'] text-[#8c8c8c]">
+              귀하는 개인정보 수집·이용에 동의하지 않을 권리가 있습니다. 동의를 거부하실 경우 사주 확인 및 이벤트 참여가 제한됩니다.
+            </p>
+          </div>
+        </DetailModal>
+      )}
     </div>
   )
 }
