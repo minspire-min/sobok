@@ -269,7 +269,7 @@ export function ResultScreen({ input }: Props) {
                   className="font-['Mona12'] text-[18px] font-bold text-white"
                   style={selected ? undefined : { textShadow: '0px 2px 0px black' }}
                 >
-                  {t.korean} - {t.hanja}
+                  {t.hanja} ({t.korean}) · {t.meaning}
                 </p>
                 <p className="font-['Pretendard'] text-[16px] text-white/80">{t.description}</p>
               </button>

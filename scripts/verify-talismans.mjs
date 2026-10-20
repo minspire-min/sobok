@@ -31,6 +31,10 @@ check(
   TALISMANS.every((t) => t.id === `${t.category}-${t.element}-${t.id.split('-').pop()}`),
 )
 
+console.log('\n5) meaning/description 빈 값 없음')
+check('meaning 전부 채워짐', TALISMANS.every((t) => t.meaning.trim().length > 0))
+check('description 전부 채워짐', TALISMANS.every((t) => t.description.trim().length > 0))
+
 console.log('\n' + '='.repeat(50))
 console.log(allOk ? '✅ 전부 통과' : '❌ 불일치 있음 — 위 로그 확인')
 process.exit(allOk ? 0 : 1)
