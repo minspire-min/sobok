@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import closeIcon from '../assets/icon-close.png'
 import { to12Hour, to24Hour } from '../lib/time'
 import { clampIndex, indexToScrollTop, scrollTopToIndex, wheelPadding } from '../lib/timeWheel'
+import { useBodyScrollLock } from '../lib/useBodyScrollLock'
 
 const ITEM_HEIGHT = 40
 const VISIBLE_ROWS = 5
@@ -28,13 +29,7 @@ export function TimePickerModal({ hour, minute, onConfirm, onCancel }: Props) {
   const [draftHour, setDraftHour] = useState(initial.hour)
   const [draftMinute, setDraftMinute] = useState(minute ?? 0)
 
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [])
+  useBodyScrollLock()
 
   return (
     <div

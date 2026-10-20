@@ -84,13 +84,14 @@ export function MainInputScreen({ onSubmit }: Props) {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center gap-[60px] bg-[#1a1a1a] px-6 pt-[60px] pb-[calc(120px+env(safe-area-inset-bottom))]">
+    <div className="flex min-h-dvh flex-col items-center gap-[40px] bg-[#1a1a1a] px-4 pt-[40px] pb-[calc(80px+env(safe-area-inset-bottom))]">
       <div className="flex flex-col items-center gap-4">
         <img src={heart} alt="" className="h-16 w-[69px] object-cover" />
         <h1 className="text-[40px] font-bold tracking-[1.6px] text-white">사주 만세력</h1>
       </div>
 
-      <div className="flex w-full max-w-[345px] flex-col gap-5">
+      <div className="flex w-full max-w-[361px] flex-col gap-10">
+        <div className="flex w-full flex-col gap-6">
         <div>
           <Bezel className="h-[48px] w-full px-4">
             <input
@@ -139,7 +140,7 @@ export function MainInputScreen({ onSubmit }: Props) {
             </Bezel>
           </div>
 
-          <div className="mt-4 flex w-full gap-4">
+          <div className="mt-3 flex w-full gap-4">
             <PixelCheckbox
               id="calendar-solar"
               label="양력"
@@ -190,7 +191,7 @@ export function MainInputScreen({ onSubmit }: Props) {
             />
           )}
 
-          <div className="mt-4">
+          <div className="mt-3">
             <PixelCheckbox
               id="time-unknown"
               label="시간 모름"
@@ -198,6 +199,7 @@ export function MainInputScreen({ onSubmit }: Props) {
               onChange={(e) => update('timeUnknown', e.target.checked)}
             />
           </div>
+        </div>
         </div>
 
         <div className="flex flex-col items-start gap-4">
@@ -208,7 +210,7 @@ export function MainInputScreen({ onSubmit }: Props) {
                 key={c.key}
                 type="button"
                 onClick={() => update('category', c.key)}
-                className={`relative rounded-[4px] px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[16px] tracking-[1.28px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
+                className={`relative rounded-[4px] px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[14px] tracking-[1.12px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
                   input.category === c.key ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
                 }`}
               >
@@ -218,24 +220,25 @@ export function MainInputScreen({ onSubmit }: Props) {
           </div>
         </div>
 
-        <div className="flex w-full items-center gap-4">
+        <div className="flex w-full items-center">
           <PixelCheckbox
             id="consent"
-            label="개인정보 수집 및 활용을 동의합니다."
+            label="개인정보 수집 및 이용에 동의합니다."
+            className="font-['Pretendard']"
             checked={input.consent}
             onChange={(e) => update('consent', e.target.checked)}
           />
           <button
             type="button"
             onClick={() => setShowConsent(true)}
-            className="shrink-0 text-[14px] text-white underline underline-offset-2"
+            className="shrink-0 font-['Pretendard'] text-[14px] text-white underline underline-offset-2"
           >
             전문 보기
           </button>
         </div>
       </div>
 
-      <div className="w-full max-w-[345px]">
+      <div className="w-full max-w-[361px]">
         <PixelButton onClick={handleSubmit} disabled={!canSubmit || submitting}>
           확인하기
         </PixelButton>
@@ -244,7 +247,7 @@ export function MainInputScreen({ onSubmit }: Props) {
       {submitting && <Loading />}
 
       {showConsent && (
-        <DetailModal title="개인정보 수집 및 활용 동의" onClose={() => setShowConsent(false)}>
+        <DetailModal title="개인정보 수집 및 이용" onClose={() => setShowConsent(false)}>
           <div className="flex flex-col gap-4 text-[14px] text-[#101010]">
             <div className="flex flex-col gap-1">
               <p className="font-['Pretendard'] font-bold">[개인정보 수집 및 이용에 대한 동의]</p>
@@ -253,7 +256,7 @@ export function MainInputScreen({ onSubmit }: Props) {
               <p className="font-['Pretendard']">- 수집하는 개인정보 항목: 이름/닉네임, 성별, 생년월일시, 고민 카테고리</p>
               <p className="font-['Pretendard']">- 개인정보 보유 및 이용 기간: 15일 내 전체 폐기</p>
             </div>
-            <p className="font-['Pretendard'] text-[#8c8c8c]">
+            <p className="font-['Pretendard']">
               귀하는 개인정보 수집·이용에 동의하지 않을 권리가 있습니다. 동의를 거부하실 경우 사주 확인 및 이벤트 참여가 제한됩니다.
             </p>
           </div>

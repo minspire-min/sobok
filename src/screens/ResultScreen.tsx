@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { PillarKey } from 'ssaju'
 import buttonBack from '../assets/button-back.svg'
+import buttonComplete from '../assets/button-complete.svg'
 import infoIcon from '../assets/icon-info.svg'
 import { DetailModal } from '../components/DetailModal'
 import { STEM_CHARACTER } from '../lib/characters'
+import { computeElementScores, determineLackingElement, type Element } from '../lib/elementScore'
 import { BRANCH_ANIMAL, ELEMENT_COLOR, ELEMENT_COLOR_WORD, ELEMENT_ORDER, ELEMENT_OUTLINE_COLOR } from '../lib/elements'
-import { SINSAL_GLOSSARY, TEN_GOD_GLOSSARY } from '../lib/glossary'
+import { SINSAL_GLOSSARY, TEN_GOD_GLOSSARY, normalizeSinsalName, sinsalDisplayName } from '../lib/glossary'
 import { computeSaju } from '../lib/sajuPipeline'
+import { clearLastInput, clearTalismanSelection, loadTalismanSelection, saveTalismanSelection } from '../lib/storage'
+import { getTalismans } from '../lib/talismans'
 import { formatKoreanTime } from '../lib/time'
 import type { SajuFormInput } from '../lib/types'
 
@@ -26,13 +30,26 @@ const PILLAR_LABEL: Record<PillarKey, string> = { hour: '시주', day: '일주',
 
 // Figma 48:224 "결과_계수" 기준. AI 해석(§5.3 [6])과 면책(§5.3 [7])은 Day 5 이후 범위 — 여기서는 다루지 않는다.
 export function ResultScreen({ input }: Props) {
-  const [modal, setModal] = useState<'tenGods' | 'sinsal' | null>(null)
+  const [modal, setModal] = useState<'tenGods' | 'sinsal' | 'talismanConfirm' | null>(null)
   const computation = useMemo(() => computeSaju(input), [input])
   const { result, timeUnknown, solarDate } = computation
 
   const dayDetail = result.pillarDetails.day
   const dayBadgeText = `${ELEMENT_COLOR_WORD[dayDetail.element.stem]} ${BRANCH_ANIMAL[dayDetail.branchKo]}`
   const characterImg = STEM_CHARACTER[dayDetail.stem]
+
+  // PRD v2 §3.6/§3.7 R6·R7 — 부적 추천. category/gender는 입력 화면에서 전부 채워야만
+  // 제출 가능하므로(R4) 이 시점엔 항상 값이 있다.
+  const lacking = useMemo(
+    () =>
+      determineLackingElement(computeElementScores(result, timeUnknown), input.category!, dayDetail.element.stem as Element, input.gender!),
+    [result, timeUnknown, input.category, input.gender, dayDetail.element.stem],
+  )
+  const talismanOptions = useMemo(() => getTalismans(input.category!, lacking.element), [input.category, lacking.element])
+
+  // PRD v2 §3.8 R8 — 부적 선택 + [선택 완료]. 서버 저장(R12) 전까지는 기기 localStorage로 잠금을 유지한다.
+  const [selectedTalismanId, setSelectedTalismanId] = useState<string | null>(() => loadTalismanSelection()?.talismanId ?? null)
+  const [talismanConfirmed, setTalismanConfirmed] = useState(() => loadTalismanSelection()?.confirmed ?? false)
 
   const timeLabel = timeUnknown ? '시간 미상' : formatKoreanTime(input.hour, input.minute)
 
@@ -43,9 +60,10 @@ export function ResultScreen({ input }: Props) {
     () => visiblePillars.map((key) => [result.sals[key].twelveSal, ...result.sals[key].specialSals]),
     [result.sals, visiblePillars],
   )
+  // 년살/도화살은 같은 별로 취급해 모달에 한 번만 — normalizeSinsalName()으로 묶어서 중복 제거
   const sinsalTags = useMemo(() => {
     const tags = new Set<string>()
-    pillarSals.forEach((names) => names.forEach((n) => tags.add(n)))
+    pillarSals.forEach((names) => names.forEach((n) => tags.add(normalizeSinsalName(n))))
     return Array.from(tags)
   }, [pillarSals])
 
@@ -54,6 +72,25 @@ export function ResultScreen({ input }: Props) {
   useEffect(() => {
     window.gtag?.('event', 'confirm_saju')
   }, [])
+
+  function selectTalisman(id: string) {
+    if (talismanConfirmed) return
+    setSelectedTalismanId(id)
+    saveTalismanSelection({ talismanId: id, confirmed: false })
+  }
+
+  function confirmTalisman() {
+    if (!selectedTalismanId) return
+    setTalismanConfirmed(true)
+    saveTalismanSelection({ talismanId: selectedTalismanId, confirmed: true })
+    setModal(null)
+  }
+
+  // PRD v2 §3.10 R10 — 공용 기기: 돌아가기 누르면 기기에 남은 입력값·부적 선택을 지운다.
+  function handleBackToInput() {
+    clearLastInput()
+    clearTalismanSelection()
+  }
 
   return (
     <div className="flex min-h-dvh flex-col items-center gap-[60px] bg-[#1a1a1a] px-4 py-[80px] text-white">
@@ -179,7 +216,7 @@ export function ResultScreen({ input }: Props) {
               <div key={key} className={`flex flex-1 flex-col items-center gap-2 py-3 ${key === 'day' ? 'bg-[#f31bc0]/15' : ''}`}>
                 {pillarSals[i].map((name) => (
                   <p key={name} className="font-['Pretendard'] text-[14px] tracking-[0.06px]">
-                    {name}
+                    {sinsalDisplayName(name)}
                   </p>
                 ))}
               </div>
@@ -212,6 +249,47 @@ export function ResultScreen({ input }: Props) {
         </div>
       </div>
 
+      {/* 부적 추천 */}
+      <div className="flex w-full max-w-[345px] flex-col items-center gap-5">
+        <div className="flex w-full flex-col items-start gap-3">
+          <h2 className="w-full pt-[2px] text-center font-['Mona12'] text-[16px] font-bold tracking-[-0.31px]">부적 추천</h2>
+          {talismanOptions.map((t) => {
+            const selected = selectedTalismanId === t.id
+            return (
+              <button
+                key={t.id}
+                type="button"
+                disabled={talismanConfirmed}
+                onClick={() => selectTalisman(t.id)}
+                className={`flex w-full flex-col items-start gap-2 rounded-[4px] bg-white/5 px-6 py-3 text-left ${
+                  selected ? 'border-2 border-[#f31bc0]' : 'border border-white/50'
+                }`}
+              >
+                <p
+                  className="font-['Mona12'] text-[18px] font-bold text-white"
+                  style={selected ? undefined : { textShadow: '0px 2px 0px black' }}
+                >
+                  {t.korean} - {t.hanja}
+                </p>
+                <p className="font-['Pretendard'] text-[16px] text-white/80">{t.description}</p>
+              </button>
+            )
+          })}
+        </div>
+
+        <button
+          type="button"
+          disabled={!selectedTalismanId || talismanConfirmed}
+          onClick={() => setModal('talismanConfirm')}
+          className="relative flex h-[40px] w-[200px] items-center justify-center disabled:opacity-40"
+        >
+          <span className="absolute inset-[-2.5%_-0.5%]">
+            <img src={buttonComplete} alt="" className="block size-full" />
+          </span>
+          <span className="relative font-['Mona12'] text-[14px] text-white">선택 완료</span>
+        </button>
+      </div>
+
       {/* 안내 배너 + 하단 버튼 */}
       <div className="flex w-full max-w-[345px] flex-col items-center gap-10">
         <div className="flex flex-col items-center gap-2">
@@ -230,7 +308,12 @@ export function ResultScreen({ input }: Props) {
           )}
         </div>
 
-        <Link to="/" state={{ forceNew: true }} className="relative flex h-[40px] w-[200px] items-center justify-center">
+        <Link
+          to="/"
+          state={{ forceNew: true }}
+          onClick={handleBackToInput}
+          className="relative flex h-[40px] w-[200px] items-center justify-center"
+        >
           <span className="absolute inset-[-12.5%_-3.5%_-22.5%_-3.5%]">
             <img src={buttonBack} alt="" className="block size-full" />
           </span>
@@ -270,10 +353,34 @@ export function ResultScreen({ input }: Props) {
           <div className="flex flex-col gap-4 text-[16px]">
             {sinsalTags.map((name) => (
               <div key={name} className="flex flex-col gap-2">
-                <p className="font-['Pretendard'] font-bold text-[#101010]">{name}</p>
+                <p className="font-['Pretendard'] font-bold text-[#101010]">{sinsalDisplayName(name)}</p>
                 <p className="font-['Pretendard'] text-[#8c8c8c]">{SINSAL_GLOSSARY[name] ?? ''}</p>
               </div>
             ))}
+          </div>
+        </DetailModal>
+      )}
+
+      {modal === 'talismanConfirm' && (
+        <DetailModal title="선택 완료" onClose={() => setModal(null)}>
+          <div className="flex flex-col gap-6">
+            <p className="font-['Pretendard'] text-[16px] text-[#101010]">선택 후에는 변경할 수 없어요.</p>
+            <div className="flex w-full gap-3">
+              <button
+                type="button"
+                onClick={() => setModal(null)}
+                className="h-[44px] flex-1 rounded-[4px] bg-white text-[16px] text-[#101010] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.2)]"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={confirmTalisman}
+                className="h-[44px] flex-1 rounded-[4px] bg-[#f31bc0] text-[16px] text-white shadow-[inset_0_3px_0_0_rgba(0,0,0,0.2)]"
+              >
+                선택 완료
+              </button>
+            </div>
           </div>
         </DetailModal>
       )}

@@ -4,8 +4,12 @@ import { Toast } from './components/Toast'
 import { MainInputScreen } from './screens/MainInputScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { SavedInfoScreen } from './screens/SavedInfoScreen'
-import { clearLastInput, loadLastInput, saveLastInput } from './lib/storage'
+import { clearLastInput, clearTalismanSelection, loadLastInput, saveLastInput } from './lib/storage'
 import type { SajuFormInput } from './lib/types'
+
+// PRD v2 §3.10 R10 — 공용 기기 운영 중에는 "저장된 정보 있음" 재진입 화면을 끈다.
+// 본인 폰 + 로그인 도입(고도화) 때 true로 되돌리면 된다. 화면 코드 자체는 지우지 않는다.
+const SHOW_SAVED_INFO_SCREEN = false
 
 function EntryRoute() {
   const navigate = useNavigate()
@@ -15,19 +19,21 @@ function EntryRoute() {
   const saved = loadLastInput()
 
   function handleSubmit(input: SajuFormInput) {
+    clearTalismanSelection()
     saveLastInput(input)
     navigate('/result', { state: { input } })
   }
 
   function handleDelete() {
     clearLastInput()
+    clearTalismanSelection()
     setForceNew(true)
     setToast('삭제 완료 되었습니다.')
   }
 
   return (
     <>
-      {saved && !forceNew ? (
+      {saved && !forceNew && SHOW_SAVED_INFO_SCREEN ? (
         <SavedInfoScreen
           nickname={saved.nickname}
           onUseSaved={() => navigate('/result', { state: { input: saved } })}

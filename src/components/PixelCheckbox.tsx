@@ -8,7 +8,7 @@ type Props = InputHTMLAttributes<HTMLInputElement> & {
 // 박스 중앙에 맞추고 두께를 조절할 수 있게 했다 (에셋 위치가 안 맞고 너무 얇았음).
 export function PixelCheckbox({ label, className = '', id, checked, ...props }: Props) {
   return (
-    <label htmlFor={id} className="-my-3 flex h-[20px] flex-1 cursor-pointer items-center gap-2 py-3">
+    <label htmlFor={id} className="flex h-[20px] flex-1 cursor-pointer items-center gap-2">
       <span className="relative flex size-[20px] shrink-0 items-center justify-center rounded-[2px] border-2 border-black bg-white">
         <input id={id} type="checkbox" checked={checked} className="peer absolute inset-0 size-full cursor-pointer appearance-none" {...props} />
         {checked && (

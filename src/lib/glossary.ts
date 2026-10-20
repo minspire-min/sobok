@@ -18,7 +18,10 @@ export const SINSAL_GLOSSARY: Record<string, string> = {
   재살: '부딪히고 다투게 되는 마찰의 기운',
   천살: '하늘이 정한 듯한 큰 압박감',
   지살: '계속 움직이고 옮겨 다니는 기운',
-  년살: '사람들 눈에 띄고 주목받는 기운',
+  // PRD v2 §3.9 R9 — ssaju가 반환하는 태그는 항상 "년살"이라 조회 키는 그대로 두고,
+  // 화면 표시 문구만 SINSAL_DISPLAY_LABEL로 "년살(도화살)"로 바꾼다. 기존 년살/도화살
+  // 두 설명을 하나로 합쳤다.
+  년살: '사람을 끄는 매력으로 눈에 띄고 주목받는 기운',
   월살: '기운이 마르듯 정체되는 시기',
   망신살: '체면이 깎이는 순간을 마주하는 기운',
   장성살: '앞장서서 이끄는 리더십',
@@ -27,7 +30,6 @@ export const SINSAL_GLOSSARY: Record<string, string> = {
   육해살: '몸과 마음이 지치기 쉬운 기운',
   화개살: '예술·종교·학문에 깊이 몰입하는 기운',
   천을귀인: '어려울 때 나를 돕는 귀인이 나타나는 길한 기운',
-  도화살: '사람을 끄는 매력',
   // ssaju가 계산하지 않아 lib/sajuPipeline.ts에서 직접 계산해 추가하는 신살 11종
   암록: '남모르게 챙겨지는 숨은 복',
   협록: '주변의 도움으로 채워지는 재물운',
@@ -41,4 +43,22 @@ export const SINSAL_GLOSSARY: Record<string, string> = {
   복성귀인: '의식주가 풍족한 복 받은 기운',
   천주귀인: '먹을 복이 풍족한 기운',
   월덕귀인: '타고난 덕과 복이 평생 따라다니는 기운',
+}
+
+// 발견 사항(PRD에 없던 것) — ssaju는 "년살"(12신살 사이클)과 "도화살"(specialSals)을
+// 서로 다른 계산 경로로 따로 반환한다. 같은 기둥에서 둘 다 뜨지 않을 수도, 다른 기둥에서
+// 각각 뜰 수도 있다. PRD는 같은 별로 보고 "년살(도화살)" 하나로 합쳐 보여 달라고 했으므로
+// 조회·표시 둘 다 이 정규화를 거친다.
+export function normalizeSinsalName(name: string): string {
+  return name === '도화살' ? '년살' : name
+}
+
+// 화면에 보여줄 때만 바꿔치는 표시 이름. 매핑에 없으면 정규화된 이름 그대로.
+const SINSAL_DISPLAY_LABEL: Record<string, string> = {
+  년살: '년살(도화살)',
+}
+
+export function sinsalDisplayName(name: string): string {
+  const normalized = normalizeSinsalName(name)
+  return SINSAL_DISPLAY_LABEL[normalized] ?? normalized
 }
