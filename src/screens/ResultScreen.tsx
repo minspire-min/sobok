@@ -250,9 +250,10 @@ export function ResultScreen({ input }: Props) {
       </div>
 
       {/* 부적 추천 */}
-      <div className="flex w-full max-w-[345px] flex-col items-center gap-5">
+      <div className="flex w-full max-w-[345px] flex-col items-center gap-6">
+        <h2 className="w-full pt-[2px] text-center font-['Mona12'] text-[16px] font-bold tracking-[-0.31px]">부적 추천</h2>
+
         <div className="flex w-full flex-col items-start gap-3">
-          <h2 className="w-full pt-[2px] text-center font-['Mona12'] text-[16px] font-bold tracking-[-0.31px]">부적 추천</h2>
           {talismanOptions.map((t) => {
             const selected = selectedTalismanId === t.id
             return (
@@ -261,17 +262,24 @@ export function ResultScreen({ input }: Props) {
                 type="button"
                 disabled={talismanConfirmed}
                 onClick={() => selectTalisman(t.id)}
-                className={`flex w-full flex-col items-start gap-2 rounded-[4px] bg-white/5 px-6 py-3 text-left ${
+                className={`flex w-full flex-col items-start gap-4 rounded-[4px] bg-white/5 px-4 py-5 text-left ${
                   selected ? 'border-2 border-[#f31bc0]' : 'border border-white/50'
                 }`}
               >
-                <p
-                  className="font-['Mona12'] text-[18px] font-bold text-white"
-                  style={selected ? undefined : { textShadow: '0px 2px 0px black' }}
+                <div
+                  className="flex items-center gap-3 font-['Mona12'] text-[18px] font-bold text-white"
+                  style={{ textShadow: '0px 2px 0px black' }}
                 >
-                  {t.hanja} ({t.korean}) · {t.meaning}
-                </p>
-                <p className="font-['Pretendard'] text-[16px] text-white/80">{t.description}</p>
+                  <p>{t.korean}</p>
+                  <p>|</p>
+                  <p>{t.hanja}</p>
+                </div>
+                <div className="flex w-full flex-col gap-2">
+                  <p className="font-['Pretendard'] text-[16px] font-bold text-white" style={{ textShadow: '0px 2px 0px black' }}>
+                    {t.meaning}
+                  </p>
+                  <p className="font-['Pretendard'] text-[14px] text-white/80">{t.description}</p>
+                </div>
               </button>
             )
           })}
