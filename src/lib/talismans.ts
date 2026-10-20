@@ -85,19 +85,19 @@ export const TALISMANS: Talisman[] = [
 
   // 직장/커리어 성장
   { id: 'career-목-1', category: 'career', element: '목', hanja: '步步高昇', korean: '보보고승', meaning: '걸음마다 높이 오른다', description: '부족한 목(木) 기운을 채워, 한 단계씩 위로 뻗어 오르는 힘을 더하는 부적' },
-  { id: 'career-목-2', category: 'career', element: '목', hanja: '開物成務', korean: '개물성무', meaning: '만물을 열어 일을 이룬다', description: '부족한 목(木) 기운을 채워, 새로운 직무로 가지를 뻗어 나갈 용기를 주는 부적' },
+  { id: 'career-목-2', category: 'career', element: '목', hanja: '開物成務', korean: '개물성무', meaning: '만물을 열어 일을 이룬다', description: '부족한 목(木) 기운을 채워, 새로운 일로 가지를 뻗어 나갈 용기를 주는 부적' },
   { id: 'career-목-3', category: 'career', element: '목', hanja: '日就月將', korean: '일취월장', meaning: '날로 달로 나아간다', description: '부족한 목(木) 기운을 채워, 매일의 노력이 나이테처럼 실력으로 쌓이도록 돕는 부적' },
   { id: 'career-화-1', category: 'career', element: '화', hanja: '薪盡火傳', korean: '신진화전', meaning: '장작이 다해도 불씨는 이어진다', description: '부족한 화(火) 기운을 채워, 번아웃으로 꺼진 열정에 다시 불을 붙이는 부적' },
   { id: 'career-화-2', category: 'career', element: '화', hanja: '光芒萬丈', korean: '광망만장', meaning: '빛살이 만 길에 뻗친다', description: '부족한 화(火) 기운을 채워, 내가 한 일이 제대로 빛나고 인정받도록 돕는 부적' },
   { id: 'career-화-3', category: 'career', element: '화', hanja: '意氣軒昂', korean: '의기헌앙', meaning: '기세가 드높고 당당하다', description: '부족한 화(火) 기운을 채워, 회의와 발표에서 내 생각을 자신 있게 펼치게 돕는 부적' },
-  { id: 'career-토-1', category: 'career', element: '토', hanja: '一諾千金', korean: '일낙천금', meaning: '한 번의 약속이 천금처럼 무겁다', description: '부족한 토(土) 기운을 채워, 상사·동료에게 믿음을 주는 사람이 되도록 돕는 부적' },
-  { id: 'career-토-2', category: 'career', element: '토', hanja: '泰然自若', korean: '태연자약', meaning: '흔들림 없이 태연하다', description: '부족한 토(土) 기운을 채워, 바쁜 조직 속에서도 나의 페이스와 중심을 지키게 하는 부적' },
-  { id: 'career-토-3', category: 'career', element: '토', hanja: '和而不同', korean: '화이부동', meaning: '어울리되 휩쓸리지 않는다', description: '부족한 토(土) 기운을 채워, 동료들과 조화롭게 일하면서도 나를 지키게 돕는 부적' },
+  { id: 'career-토-1', category: 'career', element: '토', hanja: '一諾千金', korean: '일낙천금', meaning: '한 번의 약속이 천금처럼 무겁다', description: '부족한 토(土) 기운을 채워, 함께하는 사람들에게 믿음을 주는 사람이 되도록 돕는 부적' },
+  { id: 'career-토-2', category: 'career', element: '토', hanja: '泰然自若', korean: '태연자약', meaning: '흔들림 없이 태연하다', description: '부족한 토(土) 기운을 채워, 바쁜 하루 속에서도 나의 페이스와 중심을 지키게 하는 부적' },
+  { id: 'career-토-3', category: 'career', element: '토', hanja: '和而不同', korean: '화이부동', meaning: '어울리되 휩쓸리지 않는다', description: '부족한 토(土) 기운을 채워, 함께 일하는 사람들과 조화롭게 지내면서도 나를 지키게 돕는 부적' },
   { id: 'career-금-1', category: 'career', element: '금', hanja: '一刀兩斷', korean: '일도양단', meaning: '한칼에 둘로 가른다', description: '부족한 금(金) 기운을 채워, 우선순위를 정하고 과감하게 결정하도록 돕는 부적' },
   { id: 'career-금-2', category: 'career', element: '금', hanja: '適可而止', korean: '적가이지', meaning: '알맞은 때에 그친다', description: '부족한 금(金) 기운을 채워, 넘치는 일을 끊어 낼 줄 알게 해 소진을 막아 주는 부적' },
   { id: 'career-금-3', category: 'career', element: '금', hanja: '切磋琢磨', korean: '절차탁마', meaning: '옥과 돌을 갈고 닦는다', description: '부족한 금(金) 기운을 채워, 나만의 전문성을 날카롭게 다듬게 하는 부적' },
-  { id: 'career-수-1', category: 'career', element: '수', hanja: '智者樂水', korean: '지자요수', meaning: '지혜로운 이는 물을 좋아한다', description: '부족한 수(水) 기운을 채워, 복잡한 사내 관계를 지혜롭게 헤쳐 가게 하는 부적' },
-  { id: 'career-수-2', category: 'career', element: '수', hanja: '臨機應變', korean: '임기응변', meaning: '때에 맞춰 알맞게 대처한다', description: '부족한 수(水) 기운을 채워, 직무 전환과 변화에 물처럼 유연하게 적응하도록 돕는 부적' },
+  { id: 'career-수-1', category: 'career', element: '수', hanja: '智者樂水', korean: '지자요수', meaning: '지혜로운 이는 물을 좋아한다', description: '부족한 수(水) 기운을 채워, 복잡한 사람 관계를 지혜롭게 헤쳐 가게 하는 부적' },
+  { id: 'career-수-2', category: 'career', element: '수', hanja: '臨機應變', korean: '임기응변', meaning: '때에 맞춰 알맞게 대처한다', description: '부족한 수(水) 기운을 채워, 일의 전환과 변화에 물처럼 유연하게 적응하도록 돕는 부적' },
   { id: 'career-수-3', category: 'career', element: '수', hanja: '養精蓄銳', korean: '양정축예', meaning: '기운을 기르고 힘을 모아 둔다', description: '부족한 수(水) 기운을 채워, 일과 쉼의 흐름을 되찾아 다시 일할 힘을 채워 주는 부적' },
 
   // 마음/멘탈

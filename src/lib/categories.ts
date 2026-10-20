@@ -6,7 +6,7 @@ export const CATEGORIES: { key: CategoryKey; label: string }[] = [
   { key: 'job', label: '취업/이직' },
   { key: 'relation', label: '인간관계' },
   { key: 'health', label: '건강' },
-  { key: 'career', label: '직장/커리어성장' },
+  { key: 'career', label: '커리어/사업 성장' },
   { key: 'mind', label: '마음/멘탈' },
   { key: 'love', label: '연애/결혼' },
   { key: 'family', label: '가족/육아' },
