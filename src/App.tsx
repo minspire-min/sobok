@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { SplashScreen } from './components/SplashScreen'
 import { Toast } from './components/Toast'
 import { MainInputScreen } from './screens/MainInputScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { SavedInfoScreen } from './screens/SavedInfoScreen'
+import { waitForAppFonts } from './lib/fontLoading'
 import { clearLastInput, clearTalismanSelection, loadLastInput, saveLastInput } from './lib/storage'
 import type { SajuFormInput } from './lib/types'
 
@@ -57,6 +59,14 @@ function ResultRoute() {
 }
 
 function App() {
+  const [fontsReady, setFontsReady] = useState(false)
+
+  useEffect(() => {
+    waitForAppFonts().then(() => setFontsReady(true))
+  }, [])
+
+  if (!fontsReady) return <SplashScreen />
+
   return (
     <Routes>
       <Route path="/" element={<EntryRoute />} />
