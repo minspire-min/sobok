@@ -99,8 +99,8 @@ export function MainInputScreen({ onSubmit }: Props) {
         </div>
 
         {step === 1 && (
-          <div className="flex w-full flex-col items-start gap-9">
-            <div>
+          <div className="flex w-full flex-col items-start gap-6">
+            <div className="w-full">
               <Bezel className="h-[48px] w-full px-4">
                 <input
                   type="text"
@@ -223,12 +223,12 @@ export function MainInputScreen({ onSubmit }: Props) {
                 <span className="font-['Pretendard'] text-[16px] text-white/80">이전</span>
               </button>
 
-              <div className="flex w-full flex-col items-start gap-4">
+              <div className="flex w-full flex-col items-center gap-4">
                 <div className="flex items-center gap-1">
                   <img src={heart} alt="" className="h-6 w-[26px] object-cover" />
                   <p className="font-['Pretendard'] text-[16px] text-white">요즘 고민 중인 카테고리를 선택해 주세요.</p>
                 </div>
-                <div className="flex flex-wrap gap-x-3 gap-y-[14px]">
+                <div className="flex flex-wrap justify-center gap-x-3 gap-y-[14px]">
                   {CATEGORIES.map((c) => (
                     <button
                       key={c.key}
