@@ -30,7 +30,7 @@ const PILLAR_LABEL: Record<PillarKey, string> = { hour: '시주', day: '일주',
 
 // Figma 48:224 "결과_계수" 기준. AI 해석(§5.3 [6])과 면책(§5.3 [7])은 Day 5 이후 범위 — 여기서는 다루지 않는다.
 export function ResultScreen({ input }: Props) {
-  const [modal, setModal] = useState<'tenGods' | 'sinsal' | 'talismanConfirm' | null>(null)
+  const [modal, setModal] = useState<'tenGods' | 'sinsal' | null>(null)
   const computation = useMemo(() => computeSaju(input), [input])
   const { result, timeUnknown, solarDate } = computation
 
@@ -47,9 +47,11 @@ export function ResultScreen({ input }: Props) {
   )
   const talismanOptions = useMemo(() => getTalismans(input.category!, lacking.element), [input.category, lacking.element])
 
-  // PRD v2 §3.8 R8 — 부적 선택 + [선택 완료]. 서버 저장(R12) 전까지는 기기 localStorage로 잠금을 유지한다.
+  // PRD v2 §3.8 R8 — 부적 선택 + [선택 완료]. 카드는 항상 다시 고를 수 있고, 지금 고른 것이
+  // 마지막으로 완료한 것과 같을 때만 버튼이 비활성화된다(완료 후에도 다른 카드를 고르면 버튼이
+  // 다시 활성화된다). 서버 저장(R12) 전까지는 기기 localStorage로 선택을 유지한다.
   const [selectedTalismanId, setSelectedTalismanId] = useState<string | null>(() => loadTalismanSelection()?.talismanId ?? null)
-  const [talismanConfirmed, setTalismanConfirmed] = useState(() => loadTalismanSelection()?.confirmed ?? false)
+  const [confirmedTalismanId, setConfirmedTalismanId] = useState<string | null>(() => loadTalismanSelection()?.confirmedTalismanId ?? null)
 
   const timeLabel = timeUnknown ? '시간 미상' : formatKoreanTime(input.hour, input.minute)
 
@@ -74,16 +76,14 @@ export function ResultScreen({ input }: Props) {
   }, [])
 
   function selectTalisman(id: string) {
-    if (talismanConfirmed) return
     setSelectedTalismanId(id)
-    saveTalismanSelection({ talismanId: id, confirmed: false })
+    saveTalismanSelection({ talismanId: id, confirmedTalismanId })
   }
 
   function confirmTalisman() {
     if (!selectedTalismanId) return
-    setTalismanConfirmed(true)
-    saveTalismanSelection({ talismanId: selectedTalismanId, confirmed: true })
-    setModal(null)
+    setConfirmedTalismanId(selectedTalismanId)
+    saveTalismanSelection({ talismanId: selectedTalismanId, confirmedTalismanId: selectedTalismanId })
   }
 
   // PRD v2 §3.10 R10 — 공용 기기: 돌아가기 누르면 기기에 남은 입력값·부적 선택을 지운다.
@@ -260,7 +260,6 @@ export function ResultScreen({ input }: Props) {
               <button
                 key={t.id}
                 type="button"
-                disabled={talismanConfirmed}
                 onClick={() => selectTalisman(t.id)}
                 className={`flex w-full flex-col items-center gap-4 rounded-[4px] bg-white/5 px-4 py-5 text-center md:gap-5 md:px-6 md:py-6 ${
                   selected ? 'border-2 border-[#f31bc0]' : 'border border-white/50'
@@ -290,8 +289,8 @@ export function ResultScreen({ input }: Props) {
 
         <button
           type="button"
-          disabled={!selectedTalismanId || talismanConfirmed}
-          onClick={() => setModal('talismanConfirm')}
+          disabled={!selectedTalismanId || selectedTalismanId === confirmedTalismanId}
+          onClick={confirmTalisman}
           className="relative flex h-[40px] w-[200px] items-center justify-center disabled:opacity-40 md:h-[48px] md:w-[240px]"
         >
           <span className="absolute inset-[-2.5%_-0.5%]">
@@ -368,30 +367,6 @@ export function ResultScreen({ input }: Props) {
                 <p className="font-['Pretendard'] text-[#8c8c8c]">{SINSAL_GLOSSARY[name] ?? ''}</p>
               </div>
             ))}
-          </div>
-        </DetailModal>
-      )}
-
-      {modal === 'talismanConfirm' && (
-        <DetailModal title="선택 완료" onClose={() => setModal(null)}>
-          <div className="flex flex-col gap-6">
-            <p className="font-['Pretendard'] text-[16px] text-[#101010] md:text-[19px]">선택 후에는 변경할 수 없어요.</p>
-            <div className="flex w-full gap-3">
-              <button
-                type="button"
-                onClick={() => setModal(null)}
-                className="h-[44px] flex-1 rounded-[4px] bg-white text-[16px] text-[#101010] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.2)] md:h-[52px] md:text-[19px]"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={confirmTalisman}
-                className="h-[44px] flex-1 rounded-[4px] bg-[#f31bc0] text-[16px] text-white shadow-[inset_0_3px_0_0_rgba(0,0,0,0.2)] md:h-[52px] md:text-[19px]"
-              >
-                선택 완료
-              </button>
-            </div>
           </div>
         </DetailModal>
       )}

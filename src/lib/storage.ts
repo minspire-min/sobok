@@ -22,8 +22,9 @@ export function clearLastInput(): void {
 }
 
 // PRD v2 §3.8 R8 — 부적 선택 상태. 서버 저장(R12) 전까지는 기기 localStorage로 대신해
-// 새로고침해도 잠금이 풀리지 않게 한다. 진짜 "새로고침·어드민에서 안 바뀜"은 R12에서 완성.
-export type TalismanSelection = { talismanId: string | null; confirmed: boolean }
+// 새로고침해도 유지되게 한다. confirmedTalismanId는 [선택 완료]를 누른 시점의 선택을
+// 저장해 둔다 — 지금 고른 것과 같으면 버튼이 비활성(완료 상태), 다르면 다시 활성화된다.
+export type TalismanSelection = { talismanId: string | null; confirmedTalismanId: string | null }
 const TALISMAN_SELECTION_KEY = 'saju:talismanSelection'
 
 export function loadTalismanSelection(): TalismanSelection | null {
