@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import backArrow from '../assets/icon-back-arrow.svg'
 import heart from '../assets/heart.png'
 import { Bezel } from '../components/Bezel'
 import { DetailModal } from '../components/DetailModal'
@@ -33,9 +34,11 @@ type Props = {
   onSubmit: (input: SajuFormInput) => void
 }
 
-// Figma 73:914 — 필드 구성/순서를 그대로 따른다: 닉네임 → 성별 → 생년월일 → 양음력/윤달 →
-// 시각 → 시간모름 → 고민 카테고리 → 확인하기
+// Figma `73:914`(Main_1/2) · `95:2136`(Main_2/2) — 입력이 너무 많아 2스텝으로 나눴다.
+// 1스텝: 닉네임 → 성별 → 생년월일 → 양음력/윤달 → 시각 → 시간모름 → [다음]
+// 2스텝: [이전] → 고민 카테고리 → 동의 → [사주 확인하기]
 export function MainInputScreen({ onSubmit }: Props) {
+  const [step, setStep] = useState<1 | 2>(1)
   const [input, setInput] = useState<SajuFormInput>(makeDefaultInput)
   const [dateText, setDateText] = useState('')
   const [timePicked, setTimePicked] = useState(false)
@@ -46,11 +49,11 @@ export function MainInputScreen({ onSubmit }: Props) {
   const parsedDate = parseDateText(dateText)
   const realismErrors = validateForm(input)
 
-  // PRD v2 §3.4 R4 — 6개 필수 항목이 전부 채워져야 [확인하기]가 활성화된다. 에러 메시지는 표시하지 않는다.
+  // PRD v2 §3.4 R4 — 에러 메시지 없이, 각 스텝의 필수 항목이 다 채워져야 다음으로 넘어간다.
   const dateOk = Boolean(parsedDate) && !realismErrors.date
   const timeOk = input.timeUnknown || timePicked
-  const canSubmit =
-    !realismErrors.nickname && input.gender !== null && dateOk && timeOk && input.category !== null && input.consent
+  const step1Valid = !realismErrors.nickname && input.gender !== null && dateOk && timeOk
+  const step2Valid = input.category !== null && input.consent
 
   function update<K extends keyof SajuFormInput>(key: K, value: SajuFormInput[K]) {
     setInput((prev) => {
@@ -73,175 +76,205 @@ export function MainInputScreen({ onSubmit }: Props) {
     setInput((prev) => ({ ...prev, calendarType: type, isLeapMonth: false }))
   }
 
+  function handleNext() {
+    if (step1Valid) setStep(2)
+  }
+
   // PRD v2 §3.5 R5 — 서버 저장(R12)이 아직 없어 실제로 기다릴 일이 없지만, 결과 화면 전환 전
   // 로딩이 최소 1초(로티 한 바퀴)는 보이도록 한다. R12에서 저장 API가 생기면 이 지연과
   // Promise.all로 묶어서 실패 시 토스트 + 입력값 유지 처리를 추가한다.
   async function handleSubmit() {
-    if (!canSubmit || submitting) return
+    if (!step1Valid || !step2Valid || submitting) return
     setSubmitting(true)
     await new Promise((resolve) => setTimeout(resolve, 1000))
     onSubmit(input)
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center gap-[40px] bg-[#1a1a1a] px-4 pt-[40px] pb-[calc(80px+env(safe-area-inset-bottom))]">
-      <div className="flex flex-col items-center gap-4">
-        <img src={heart} alt="" className="h-16 w-[69px] object-cover" />
-        <h1 className="text-[40px] font-bold tracking-[1.6px] text-white">사주 만세력</h1>
-      </div>
-
-      <div className="flex w-full max-w-[361px] flex-col gap-10">
-        <div className="flex w-full flex-col gap-6">
-        <div>
-          <Bezel className="h-[48px] w-full px-4">
-            <input
-              type="text"
-              inputMode="text"
-              placeholder="이름/닉네임 입력"
-              value={input.nickname}
-              onChange={(e) => update('nickname', e.target.value)}
-              className="w-full bg-transparent text-[16px] tracking-[1.28px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
-            />
-          </Bezel>
+    <div className="flex min-h-dvh flex-col items-center justify-between bg-[#1a1a1a] px-4 pt-[60px] pb-[calc(80px+env(safe-area-inset-bottom))]">
+      <div className="flex w-full max-w-[361px] flex-col items-center gap-12">
+        <div className="flex flex-col items-center gap-4">
+          <img src={heart} alt="" className="h-16 w-[69px] object-cover" />
+          <h1 className="text-[40px] font-bold tracking-[1.6px] text-white">사주 만세력</h1>
         </div>
 
-        <div className="flex w-full gap-5">
-          <button
-            type="button"
-            onClick={() => update('gender', '여')}
-            className={`flex h-[48px] flex-1 items-center justify-center rounded-[4px] px-4 text-[16px] tracking-[1.28px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
-              input.gender === '여' ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
-            }`}
-          >
-            여자
-          </button>
-          <button
-            type="button"
-            onClick={() => update('gender', '남')}
-            className={`flex h-[48px] flex-1 items-center justify-center rounded-[4px] px-4 text-[16px] tracking-[1.28px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
-              input.gender === '남' ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
-            }`}
-          >
-            남자
-          </button>
-        </div>
+        {step === 1 && (
+          <div className="flex w-full flex-col items-start gap-9">
+            <div>
+              <Bezel className="h-[48px] w-full px-4">
+                <input
+                  type="text"
+                  inputMode="text"
+                  placeholder="이름/닉네임 입력"
+                  value={input.nickname}
+                  onChange={(e) => update('nickname', e.target.value)}
+                  className="w-full bg-transparent text-[16px] tracking-[1.28px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
+                />
+              </Bezel>
+            </div>
 
-        <div className="flex w-full flex-col">
-          <div>
-            <Bezel className="h-[48px] w-full px-4">
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="1990.01.01"
-                value={dateText}
-                onChange={(e) => handleDateTextChange(e.target.value)}
-                className="w-full bg-transparent text-[16px] tracking-[3.2px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
-              />
-            </Bezel>
-          </div>
-
-          <div className="mt-3 flex w-full gap-4">
-            <PixelCheckbox
-              id="calendar-solar"
-              label="양력"
-              checked={input.calendarType === 'solar'}
-              onChange={() => selectCalendarType('solar')}
-            />
-            <PixelCheckbox
-              id="calendar-lunar"
-              label="음력"
-              checked={input.calendarType === 'lunar'}
-              onChange={() => selectCalendarType('lunar')}
-            />
-            <PixelCheckbox
-              id="leap-month"
-              label="윤달"
-              checked={input.isLeapMonth}
-              onChange={(e) => {
-                const isLeapMonth = e.target.checked
-                setInput((prev) => ({ ...prev, isLeapMonth, calendarType: isLeapMonth ? 'lunar' : prev.calendarType }))
-              }}
-            />
-          </div>
-
-          <div className="mt-5">
-            <Bezel className="h-[48px] w-full">
+            <div className="flex w-full gap-5">
               <button
                 type="button"
-                disabled={input.timeUnknown}
-                onClick={() => setPickerOpen(true)}
-                className="absolute inset-0 flex w-full items-center justify-between px-4 text-[16px] tracking-[1.28px] text-[#101010] disabled:opacity-50"
-              >
-                <span>{timePicked ? formatKoreanTime(input.hour, input.minute) : '시간 선택'}</span>
-              </button>
-              <span aria-hidden className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-['Mona10'] text-[#101010]">▼</span>
-            </Bezel>
-          </div>
-          {pickerOpen && (
-            <TimePickerModal
-              hour={timePicked ? input.hour : null}
-              minute={timePicked ? input.minute : null}
-              onConfirm={(h, m) => {
-                update('hour', h)
-                update('minute', m)
-                setTimePicked(true)
-                setPickerOpen(false)
-              }}
-              onCancel={() => setPickerOpen(false)}
-            />
-          )}
-
-          <div className="mt-3">
-            <PixelCheckbox
-              id="time-unknown"
-              label="시간 모름"
-              checked={input.timeUnknown}
-              onChange={(e) => update('timeUnknown', e.target.checked)}
-            />
-          </div>
-        </div>
-        </div>
-
-        <div className="flex flex-col items-start gap-4">
-          <p className="font-['Pretendard'] text-[16px] text-white">요즘 고민 중인 카테고리를 선택해 주세요.</p>
-          <div className="flex flex-wrap gap-x-3 gap-y-[14px]">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.key}
-                type="button"
-                onClick={() => update('category', c.key)}
-                className={`relative rounded-[4px] px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[14px] tracking-[1.12px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
-                  input.category === c.key ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
+                onClick={() => update('gender', '여')}
+                className={`flex h-[48px] flex-1 items-center justify-center rounded-[4px] px-4 text-[16px] tracking-[1.28px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
+                  input.gender === '여' ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
                 }`}
               >
-                {c.label}
+                여자
               </button>
-            ))}
-          </div>
-        </div>
+              <button
+                type="button"
+                onClick={() => update('gender', '남')}
+                className={`flex h-[48px] flex-1 items-center justify-center rounded-[4px] px-4 text-[16px] tracking-[1.28px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
+                  input.gender === '남' ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
+                }`}
+              >
+                남자
+              </button>
+            </div>
 
-        <div className="flex w-full items-center">
-          <PixelCheckbox
-            id="consent"
-            label="개인정보 수집 및 이용에 동의합니다."
-            className="font-['Pretendard']"
-            checked={input.consent}
-            onChange={(e) => update('consent', e.target.checked)}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConsent(true)}
-            className="shrink-0 font-['Pretendard'] text-[14px] text-white underline underline-offset-2"
-          >
-            전문 보기
-          </button>
-        </div>
+            <div className="flex w-full flex-col">
+              <div>
+                <Bezel className="h-[48px] w-full px-4">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="1990.01.01"
+                    value={dateText}
+                    onChange={(e) => handleDateTextChange(e.target.value)}
+                    className="w-full bg-transparent text-[16px] tracking-[3.2px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
+                  />
+                </Bezel>
+              </div>
+
+              <div className="mt-3 flex w-full gap-4">
+                <PixelCheckbox
+                  id="calendar-solar"
+                  label="양력"
+                  checked={input.calendarType === 'solar'}
+                  onChange={() => selectCalendarType('solar')}
+                />
+                <PixelCheckbox
+                  id="calendar-lunar"
+                  label="음력"
+                  checked={input.calendarType === 'lunar'}
+                  onChange={() => selectCalendarType('lunar')}
+                />
+                <PixelCheckbox
+                  id="leap-month"
+                  label="윤달"
+                  checked={input.isLeapMonth}
+                  onChange={(e) => {
+                    const isLeapMonth = e.target.checked
+                    setInput((prev) => ({ ...prev, isLeapMonth, calendarType: isLeapMonth ? 'lunar' : prev.calendarType }))
+                  }}
+                />
+              </div>
+
+              <div className="mt-5">
+                <Bezel className="h-[48px] w-full">
+                  <button
+                    type="button"
+                    disabled={input.timeUnknown}
+                    onClick={() => setPickerOpen(true)}
+                    className="absolute inset-0 flex w-full items-center justify-between px-4 text-[16px] tracking-[1.28px] text-[#101010] disabled:opacity-50"
+                  >
+                    <span>{timePicked ? formatKoreanTime(input.hour, input.minute) : '시간 선택'}</span>
+                  </button>
+                  <span aria-hidden className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-['Mona10'] text-[#101010]">▼</span>
+                </Bezel>
+              </div>
+              {pickerOpen && (
+                <TimePickerModal
+                  hour={timePicked ? input.hour : null}
+                  minute={timePicked ? input.minute : null}
+                  onConfirm={(h, m) => {
+                    update('hour', h)
+                    update('minute', m)
+                    setTimePicked(true)
+                    setPickerOpen(false)
+                  }}
+                  onCancel={() => setPickerOpen(false)}
+                />
+              )}
+
+              <div className="mt-3">
+                <PixelCheckbox
+                  id="time-unknown"
+                  label="시간 모름"
+                  checked={input.timeUnknown}
+                  onChange={(e) => update('timeUnknown', e.target.checked)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <>
+            <div className="flex w-full flex-col items-start gap-5">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="flex items-center gap-1 rounded-full border border-white/30 py-2 pl-2 pr-3"
+              >
+                <img src={backArrow} alt="" className="size-4" />
+                <span className="font-['Pretendard'] text-[16px] text-white/80">이전</span>
+              </button>
+
+              <div className="flex w-full flex-col items-start gap-4">
+                <div className="flex items-center gap-1">
+                  <img src={heart} alt="" className="h-6 w-[26px] object-cover" />
+                  <p className="font-['Pretendard'] text-[16px] text-white">요즘 고민 중인 카테고리를 선택해 주세요.</p>
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-[14px]">
+                  {CATEGORIES.map((c) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      onClick={() => update('category', c.key)}
+                      className={`relative rounded-[4px] px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[14px] tracking-[1.12px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
+                        input.category === c.key ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex w-full items-center">
+              <PixelCheckbox
+                id="consent"
+                label="개인정보 수집 및 이용에 동의합니다."
+                className="font-['Pretendard']"
+                checked={input.consent}
+                onChange={(e) => update('consent', e.target.checked)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConsent(true)}
+                className="shrink-0 font-['Pretendard'] text-[14px] text-white underline underline-offset-2"
+              >
+                전문 보기
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="w-full max-w-[361px]">
-        <PixelButton onClick={handleSubmit} disabled={!canSubmit || submitting}>
-          확인하기
-        </PixelButton>
+        {step === 1 ? (
+          <PixelButton onClick={handleNext} disabled={!step1Valid}>
+            다음
+          </PixelButton>
+        ) : (
+          <PixelButton onClick={handleSubmit} disabled={!step2Valid || submitting}>
+            사주 확인하기
+          </PixelButton>
+        )}
       </div>
 
       {submitting && <Loading />}
