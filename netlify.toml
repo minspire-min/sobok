@@ -10,3 +10,10 @@
   for = "/admin-mingminjimin*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
+
+# react-router(클라이언트 라우팅) 경로를 새로고침·직접 접속해도 index.html로 떨어지게 한다.
+# /api/* 는 netlify/functions의 각 Config.path가 더 구체적인 경로라 먼저 매칭되므로 안 가려진다.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
