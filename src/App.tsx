@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { SplashScreen } from './components/SplashScreen'
 import { Toast } from './components/Toast'
@@ -12,6 +12,9 @@ import type { SajuFormInput } from './lib/types'
 // PRD v2 §3.10 R10 — 공용 기기 운영 중에는 "저장된 정보 있음" 재진입 화면을 끈다.
 // 본인 폰 + 로그인 도입(고도화) 때 true로 되돌리면 된다. 화면 코드 자체는 지우지 않는다.
 const SHOW_SAVED_INFO_SCREEN = false
+
+// 참여자 번들에 관리자 화면 코드가 안 들어가도록 지연 로딩한다.
+const AdminApp = lazy(() => import('./admin/AdminApp').then((m) => ({ default: m.AdminApp })))
 
 function EntryRoute() {
   const navigate = useNavigate()
@@ -71,6 +74,14 @@ function App() {
     <Routes>
       <Route path="/" element={<EntryRoute />} />
       <Route path="/result" element={<ResultRoute />} />
+      <Route
+        path="/admin-mingminjimin/*"
+        element={
+          <Suspense fallback={null}>
+            <AdminApp />
+          </Suspense>
+        }
+      />
     </Routes>
   )
 }
