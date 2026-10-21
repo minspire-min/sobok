@@ -29,8 +29,20 @@ export function SajuSummaryCard({ input }: Props) {
   const timeLabel = timeUnknown ? '시간 미상' : formatKoreanTime(input.hour, input.minute)
   const visiblePillars = PILLAR_ORDER.filter((key) => !(key === 'hour' && timeUnknown))
 
+  // ssaju가 같은 기둥에 twelveSal과 specialSals로 같은 별(또는 년살/도화살처럼 같은 별 취급되는
+  // 쌍)을 중복으로 내려줄 때가 있어, 정규화한 이름 기준으로 기둥 내 중복을 한 번만 보이게 거른다.
   const pillarSals = useMemo(
-    () => visiblePillars.map((key) => [result.sals[key].twelveSal, ...result.sals[key].specialSals]),
+    () =>
+      visiblePillars.map((key) => {
+        const raw = [result.sals[key].twelveSal, ...result.sals[key].specialSals]
+        const seen = new Set<string>()
+        return raw.filter((name) => {
+          const normalized = normalizeSinsalName(name)
+          if (seen.has(normalized)) return false
+          seen.add(normalized)
+          return true
+        })
+      }),
     [result.sals, visiblePillars],
   )
   const sinsalTags = useMemo(() => {
