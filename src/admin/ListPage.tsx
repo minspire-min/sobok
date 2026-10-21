@@ -1,3 +1,4 @@
+import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -18,9 +19,10 @@ export function ListPage() {
   const navigate = useNavigate()
   const [items, setItems] = useState<AdminSubmission[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-  useEffect(() => {
-    listSubmissions()
+  function refresh() {
+    return listSubmissions()
       .then(setItems)
       .catch((e) => {
         if (e instanceof AdminAuthError) {
@@ -29,7 +31,18 @@ export function ListPage() {
         }
         setError(e instanceof Error ? e.message : String(e))
       })
+  }
+
+  useEffect(() => {
+    refresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate])
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    await refresh()
+    setRefreshing(false)
+  }
 
   async function handleLogout() {
     await logout()
@@ -44,9 +57,20 @@ export function ListPage() {
       <div className="border-b border-[#dcdcdc] px-6 py-6">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <h1 className="text-2xl font-bold text-[#0a0a0a]">참여자 ({items.length})</h1>
-          <Button variant="outline" className="rounded-[10px] border-[#c9c9c9] px-4 py-1.5 text-base font-medium text-[#0a0a0a]" onClick={handleLogout}>
-            로그아웃
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="목록 새로고침"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw className={refreshing ? 'animate-spin' : ''} />
+            </Button>
+            <Button variant="outline" className="rounded-[10px] border-[#c9c9c9] px-4 py-1.5 text-base font-medium text-[#0a0a0a]" onClick={handleLogout}>
+              로그아웃
+            </Button>
+          </div>
         </div>
       </div>
 
