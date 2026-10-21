@@ -6,7 +6,7 @@ import { MainInputScreen } from './screens/MainInputScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { SavedInfoScreen } from './screens/SavedInfoScreen'
 import { waitForAppFonts } from './lib/fontLoading'
-import { clearLastInput, clearTalismanSelection, loadLastInput, saveLastInput } from './lib/storage'
+import { clearLastInput, clearSubmissionId, clearTalismanSelection, loadLastInput, saveLastInput } from './lib/storage'
 import type { SajuFormInput } from './lib/types'
 
 // PRD v2 §3.10 R10 — 공용 기기 운영 중에는 "저장된 정보 있음" 재진입 화면을 끈다.
@@ -32,6 +32,7 @@ function EntryRoute() {
   function handleDelete() {
     clearLastInput()
     clearTalismanSelection()
+    clearSubmissionId()
     setForceNew(true)
     setToast('삭제 완료 되었습니다.')
   }

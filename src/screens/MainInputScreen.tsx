@@ -10,6 +10,8 @@ import { TimePickerModal } from '../components/TimePickerModal'
 import { CATEGORIES } from '../lib/categories'
 import { formatKoreanTime } from '../lib/time'
 import { formatDateInput, parseDateText } from '../lib/textInputs'
+import { clearSubmissionId, saveSubmissionId } from '../lib/storage'
+import { createSubmission } from '../lib/submissionApi'
 import type { SajuFormInput } from '../lib/types'
 import { validateForm } from '../lib/validation'
 
@@ -80,13 +82,15 @@ export function MainInputScreen({ onSubmit }: Props) {
     if (step1Valid) setStep(2)
   }
 
-  // PRD v2 §3.5 R5 — 서버 저장(R12)이 아직 없어 실제로 기다릴 일이 없지만, 결과 화면 전환 전
-  // 로딩이 최소 1초(로티 한 바퀴)는 보이도록 한다. R12에서 저장 API가 생기면 이 지연과
-  // Promise.all로 묶어서 실패 시 토스트 + 입력값 유지 처리를 추가한다.
+  // PRD v2 §3.5 R5 — 로딩은 서버 저장 요청(R12)과 함께 최소 1초는 보이도록 묶는다.
+  // 서버 저장이 실패해도(네트워크 문제 등) 참여자 결과 확인 자체는 막지 않는다 —
+  // 이 경우 어드민 목록엔 안 뜨지만 로컬 저장 기반 결과 화면은 그대로 진행된다.
   async function handleSubmit() {
     if (!step1Valid || !step2Valid || submitting) return
     setSubmitting(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    clearSubmissionId()
+    const [created] = await Promise.all([createSubmission(input), new Promise((resolve) => setTimeout(resolve, 1000))])
+    if (created) saveSubmissionId(created.id)
     onSubmit(input)
   }
 

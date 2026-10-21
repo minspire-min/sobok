@@ -5,7 +5,15 @@ import buttonComplete from '../assets/button-complete.svg'
 import { SajuSummaryCard } from '../components/SajuSummaryCard'
 import { computeElementScores, determineLackingElement, type Element } from '../lib/elementScore'
 import { computeSaju } from '../lib/sajuPipeline'
-import { clearLastInput, clearTalismanSelection, loadTalismanSelection, saveTalismanSelection } from '../lib/storage'
+import {
+  clearLastInput,
+  clearSubmissionId,
+  clearTalismanSelection,
+  loadSubmissionId,
+  loadTalismanSelection,
+  saveTalismanSelection,
+} from '../lib/storage'
+import { updateSubmissionSelection } from '../lib/submissionApi'
 import { getTalismans } from '../lib/talismans'
 import type { SajuFormInput } from '../lib/types'
 
@@ -53,12 +61,15 @@ export function ResultScreen({ input }: Props) {
     if (!selectedTalismanId) return
     setConfirmedTalismanId(selectedTalismanId)
     saveTalismanSelection({ talismanId: selectedTalismanId, confirmedTalismanId: selectedTalismanId })
+    const submissionId = loadSubmissionId()
+    if (submissionId) void updateSubmissionSelection(submissionId, selectedTalismanId)
   }
 
   // PRD v2 §3.10 R10 — 공용 기기: 돌아가기 누르면 기기에 남은 입력값·부적 선택을 지운다.
   function handleBackToInput() {
     clearLastInput()
     clearTalismanSelection()
+    clearSubmissionId()
   }
 
   return (

@@ -44,3 +44,18 @@ export function saveTalismanSelection(selection: TalismanSelection): void {
 export function clearTalismanSelection(): void {
   localStorage.removeItem(TALISMAN_SELECTION_KEY)
 }
+
+// R12 — 서버에 생성된 제출 기록 id. 결과 화면에서 부적 선택을 PATCH로 보낼 때 필요하다.
+const SUBMISSION_ID_KEY = 'saju:submissionId'
+
+export function loadSubmissionId(): string | null {
+  return localStorage.getItem(SUBMISSION_ID_KEY)
+}
+
+export function saveSubmissionId(id: string): void {
+  localStorage.setItem(SUBMISSION_ID_KEY, id)
+}
+
+export function clearSubmissionId(): void {
+  localStorage.removeItem(SUBMISSION_ID_KEY)
+}
