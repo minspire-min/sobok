@@ -1,8 +1,8 @@
-import { Check } from 'lucide-react'
+import { Check, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { SajuSummaryCard } from '../components/SajuSummaryCard'
 import { CATEGORIES } from '../lib/categories'
@@ -49,6 +49,7 @@ export function DetailPage() {
   const [saving, setSaving] = useState(false)
   const [readingLoading, setReadingLoading] = useState(false)
   const [readingError, setReadingError] = useState<string | null>(null)
+  const [talismanRefreshing, setTalismanRefreshing] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -74,6 +75,24 @@ export function DetailPage() {
     if (pendingTalismanId === submission!.selectedTalismanId) return
     const updated = await updateSubmission(submission!.id, { selectedTalismanId: pendingTalismanId })
     setSubmission(updated)
+  }
+
+  // 참여자가 폰에서 고르는 걸 보면서 확인할 때 전체 페이지를 새로고침하지 않아도 되게 한다.
+  async function handleRefreshTalisman() {
+    setTalismanRefreshing(true)
+    try {
+      const fresh = await getSubmission(submission!.id)
+      setSubmission(fresh)
+      setPendingTalismanId(fresh.selectedTalismanId)
+    } catch (e) {
+      if (e instanceof AdminAuthError) {
+        navigate('../login', { replace: true })
+        return
+      }
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setTalismanRefreshing(false)
+    }
   }
 
   async function handleMemoSave() {
@@ -141,6 +160,17 @@ export function DetailPage() {
           <Card className="rounded-[14px] border-0 py-5 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
             <CardHeader>
               <CardTitle className="text-base">부적 선택</CardTitle>
+              <CardAction>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="부적 선택 새로고침"
+                  onClick={handleRefreshTalisman}
+                  disabled={talismanRefreshing}
+                >
+                  <RefreshCw className={talismanRefreshing ? 'animate-spin' : ''} />
+                </Button>
+              </CardAction>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <div className="flex flex-col gap-2">
