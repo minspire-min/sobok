@@ -72,25 +72,43 @@ async function generateReading(submission: Submission): Promise<{ text: string }
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) return { error: 'ANTHROPIC_API_KEY not configured' }
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: READING_MODEL,
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: buildUserPrompt(submission) }],
-    }),
-  })
+  let res: Response
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: READING_MODEL,
+        max_tokens: 768,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildUserPrompt(submission) }],
+      }),
+      // Netlify Functions 기본 실행 제한(약 10~26초) 안에서 명확히 실패하도록, 애매하게
+      // 오래 매달리는 대신 20초에서 끊는다 — 원인 파악 안 되는 "그냥 에러남" 대신
+      // 로그에 사유가 남도록.
+      signal: AbortSignal.timeout(20000),
+    })
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e)
+    console.error('[admin-reading] fetch failed:', reason)
+    return { error: `요청 실패: ${reason}` }
+  }
 
-  if (!res.ok) return { error: `anthropic api error: ${res.status}` }
+  if (!res.ok) {
+    const bodyText = await res.text().catch(() => '')
+    console.error(`[admin-reading] anthropic api error ${res.status}:`, bodyText)
+    return { error: `anthropic api error: ${res.status}` }
+  }
   const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> }
   const text = data.content?.find((c) => c.type === 'text')?.text
-  if (!text) return { error: 'empty response' }
+  if (!text) {
+    console.error('[admin-reading] empty response, raw data:', JSON.stringify(data))
+    return { error: 'empty response' }
+  }
   return { text }
 }
 

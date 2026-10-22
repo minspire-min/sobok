@@ -36,18 +36,6 @@ export function ListPage() {
 
   useEffect(() => {
     refresh()
-    // 수동 새로고침을 안 눌러도 방금 들어온 참여자가 자동으로 보이도록 주기적으로 갱신한다.
-    // 참여자 규모가 작은 행사라 1초 간격으로도 서버 부담은 거의 없다.
-    const timer = window.setInterval(refresh, 1000)
-    // 다른 탭 보다가 돌아왔을 때는 다음 틱까지 안 기다리고 바로 한 번 갱신한다.
-    function handleVisibility() {
-      if (document.visibilityState === 'visible') refresh()
-    }
-    document.addEventListener('visibilitychange', handleVisibility)
-    return () => {
-      window.clearInterval(timer)
-      document.removeEventListener('visibilitychange', handleVisibility)
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate])
 
