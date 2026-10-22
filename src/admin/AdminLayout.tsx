@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { logout } from './api'
 
 const BASE = '/admin-mingminjimin'
+const COLLAPSED_KEY = 'admin-sidebar-collapsed'
 
 function navClass({ isActive }: { isActive: boolean }): string {
   return `flex items-center gap-2 rounded-[8px] px-3 py-2 text-sm ${
@@ -18,9 +19,19 @@ type Props = {
 }
 
 // 참여자 목록/상세/통계 화면이 전부 공유하는 좌측 사이드바 레이아웃.
+// 페이지 이동 시 이 컴포넌트가 매번 다시 마운트되므로, 접힘 상태는
+// localStorage에 저장해 버튼으로 바꾸기 전까진 유지되게 한다.
 export function AdminLayout({ children }: Props) {
   const navigate = useNavigate()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1')
+
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      const next = !v
+      localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0')
+      return next
+    })
+  }
 
   async function handleLogout() {
     await logout()
@@ -37,7 +48,7 @@ export function AdminLayout({ children }: Props) {
         <button
           type="button"
           aria-label={collapsed ? '메뉴 펼치기' : '메뉴 접기'}
-          onClick={() => setCollapsed((v) => !v)}
+          onClick={toggleCollapsed}
           className="absolute top-4 -right-3 flex size-6 items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#525252] shadow-sm hover:bg-[#f0f0f0]"
         >
           {collapsed ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
