@@ -83,7 +83,8 @@ async function generateReading(submission: Submission): Promise<{ text: string }
       },
       body: JSON.stringify({
         model: READING_MODEL,
-        max_tokens: 768,
+        // 768이었다가 5개 항목 풀이가 길어지면 중간에 잘리는 문제가 있어 여유있게 올림.
+        max_tokens: 1536,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: buildUserPrompt(submission) }],
       }),
@@ -110,6 +111,9 @@ async function generateReading(submission: Submission): Promise<{ text: string }
     error?: { type?: string; message?: string }
   }
   const text = data.content?.find((c) => c.type === 'text')?.text
+  if (text && data.stop_reason === 'max_tokens') {
+    console.error(`[admin-reading] truncated by max_tokens, length=${text.length}`)
+  }
   if (!text) {
     // console.error를 여러 인자로 쪼개서 넘기면 Netlify 로그 파이프라인에서 메시지가
     // 통째로 비어 보이는 문제가 있어(실제 확인됨) 문자열 하나로 합쳐서 남긴다.
