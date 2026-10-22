@@ -3,7 +3,12 @@ import { applyDstCorrection } from './dst.ts'
 import type { SajuFormInput } from './types.ts'
 
 // PRD v2 §3.1 R1 — 출생지 입력을 없애고 서울 경도로 고정 보정한다.
-const SEOUL_LONGITUDE = 126.98
+// 서울 실제 경도(126.98°)로 계산하면 보정폭이 -32.08분이라, 자정 근처 출생자는 날짜가
+// 하루 앞으로 밀려 일주·시주가 완전히 달라지는 사례가 확인됨(1993.09.06 00:30 테스트
+// 케이스: 보정 후 9/5 23:58로 밀려 일주 경인→기축, 시주 병자→갑자로 틀어짐). 대부분의
+// 만세력 서비스가 쓰는 깔끔한 -30분 보정과 일치하도록 경도를 127.5°로 조정(사용자 확인 후
+// 결정 — 자정에 걸친 000~0분대생 전부가 아니라 이 테스트 케이스 기준의 보정값).
+const SEOUL_LONGITUDE = 127.5
 
 export type SajuComputation = {
   result: SajuResult
