@@ -13,6 +13,7 @@ import { formatDateInput, parseDateText } from '../lib/textInputs'
 import { clearSubmissionId, saveSubmissionId } from '../lib/storage'
 import { createSubmission } from '../lib/submissionApi'
 import type { SajuFormInput } from '../lib/types'
+import { usePageVisitTracking } from '../lib/usePageVisitTracking'
 import { validateForm } from '../lib/validation'
 
 function makeDefaultInput(): SajuFormInput {
@@ -47,6 +48,7 @@ export function MainInputScreen({ onSubmit }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [showConsent, setShowConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const { markCompleted } = usePageVisitTracking('main')
 
   const parsedDate = parseDateText(dateText)
   const realismErrors = validateForm(input)
@@ -90,7 +92,10 @@ export function MainInputScreen({ onSubmit }: Props) {
     setSubmitting(true)
     clearSubmissionId()
     const [created] = await Promise.all([createSubmission(input), new Promise((resolve) => setTimeout(resolve, 1000))])
-    if (created) saveSubmissionId(created.id)
+    if (created) {
+      saveSubmissionId(created.id)
+      markCompleted(created.id)
+    }
     onSubmit(input)
   }
 

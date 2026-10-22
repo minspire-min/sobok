@@ -8,6 +8,7 @@ import { SajuSummaryCard } from '../components/SajuSummaryCard'
 import { CATEGORIES } from '../lib/categories'
 import { TALISMANS } from '../lib/talismans'
 import type { SajuFormInput } from '../lib/types'
+import { AdminLayout } from './AdminLayout'
 import { AdminAuthError, generateReading, getSubmission, updateSubmission } from './api'
 import type { AdminSubmission } from './types'
 
@@ -68,8 +69,8 @@ export function DetailPage() {
       })
   }, [id, navigate])
 
-  if (error) return <div className="p-6 text-sm text-destructive">{error}</div>
-  if (!submission) return <div className="p-6 text-sm text-muted-foreground">불러오는 중...</div>
+  if (error) return <AdminLayout><div className="p-6 text-sm text-destructive">{error}</div></AdminLayout>
+  if (!submission) return <AdminLayout><div className="p-6 text-sm text-muted-foreground">불러오는 중...</div></AdminLayout>
 
   async function handleConfirmTalisman() {
     if (pendingTalismanId === submission!.selectedTalismanId) return
@@ -119,8 +120,8 @@ export function DetailPage() {
   }
 
   return (
-    <div className="flex min-h-dvh justify-center bg-white">
-      <div className="w-[1105px] p-6">
+    <AdminLayout>
+      <div className="mx-auto w-[1105px] p-6">
         <Button
           variant="outline"
           className="mb-6 rounded-[10px] border-[#c9c9c9] px-4 py-1.5 text-sm font-medium text-[#0a0a0a]"
@@ -257,6 +258,6 @@ export function DetailPage() {
         </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 }

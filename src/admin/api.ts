@@ -1,4 +1,4 @@
-import type { AdminSubmission } from './types'
+import type { AdminPageVisit, AdminSubmission } from './types'
 
 export class AdminAuthError extends Error {}
 
@@ -58,4 +58,9 @@ export async function updateSubmission(
 export async function generateReading(id: string): Promise<AdminSubmission> {
   const data = await request<{ submission: AdminSubmission }>(`/submissions/${id}/reading`, { method: 'POST' })
   return data.submission
+}
+
+export async function listPageVisits(): Promise<AdminPageVisit[]> {
+  const data = await request<{ visits: AdminPageVisit[] }>('/page-visits')
+  return data.visits
 }

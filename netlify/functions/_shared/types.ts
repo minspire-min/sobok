@@ -53,3 +53,15 @@ export type SubmissionInput = {
   category: CategoryKey
   consent: boolean
 }
+
+// 체류시간/이탈 추적용 — 제출 완료 여부와 무관하게 화면에 들어온 순간 생성된다
+// (끝까지 안 채우고 나간 "중도이탈"까지 보려면 제출 시점이 아니라 진입 시점에 기록해야 함).
+export type PageVisit = {
+  id: string
+  page: 'main' | 'result'
+  enteredAt: string // ISO — 진입 시각
+  lastSeenAt: string // ISO — 마지막으로 화면이 보였던 시각(탭 숨김/이탈 시점 근사치, beacon으로 갱신)
+  completed: boolean // main: 제출 완료 / result: 부적 선택 완료
+  completedAt: string | null
+  submissionId: string | null
+}

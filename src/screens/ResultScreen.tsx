@@ -16,6 +16,7 @@ import {
 import { updateSubmissionSelection } from '../lib/submissionApi'
 import { getTalismans } from '../lib/talismans'
 import type { SajuFormInput } from '../lib/types'
+import { usePageVisitTracking } from '../lib/usePageVisitTracking'
 
 declare global {
   interface Window {
@@ -47,6 +48,7 @@ export function ResultScreen({ input }: Props) {
   // 다시 활성화된다). 서버 저장(R12) 전까지는 기기 localStorage로 선택을 유지한다.
   const [selectedTalismanId, setSelectedTalismanId] = useState<string | null>(() => loadTalismanSelection()?.talismanId ?? null)
   const [confirmedTalismanId, setConfirmedTalismanId] = useState<string | null>(() => loadTalismanSelection()?.confirmedTalismanId ?? null)
+  const { markCompleted } = usePageVisitTracking('result')
 
   useEffect(() => {
     window.gtag?.('event', 'confirm_saju')
@@ -63,6 +65,7 @@ export function ResultScreen({ input }: Props) {
     saveTalismanSelection({ talismanId: selectedTalismanId, confirmedTalismanId: selectedTalismanId })
     const submissionId = loadSubmissionId()
     if (submissionId) void updateSubmissionSelection(submissionId, selectedTalismanId)
+    markCompleted(submissionId ?? undefined)
   }
 
   // PRD v2 §3.10 R10 — 공용 기기: 돌아가기 누르면 기기에 남은 입력값·부적 선택을 지운다.

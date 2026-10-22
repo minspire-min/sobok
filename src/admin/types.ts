@@ -33,3 +33,13 @@ export type AdminSubmission = {
   memo: string
   memoUpdatedAt: string | null
 }
+
+export type AdminPageVisit = {
+  id: string
+  page: 'main' | 'result'
+  enteredAt: string
+  lastSeenAt: string
+  completed: boolean
+  completedAt: string | null
+  submissionId: string | null
+}

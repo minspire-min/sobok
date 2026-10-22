@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { CATEGORIES } from '../lib/categories'
 import { TALISMANS } from '../lib/talismans'
-import { AdminAuthError, listSubmissions, logout } from './api'
+import { AdminLayout } from './AdminLayout'
+import { AdminAuthError, listSubmissions } from './api'
 import type { AdminSubmission } from './types'
 
 function categoryLabel(key: string): string {
@@ -44,33 +45,23 @@ export function ListPage() {
     setRefreshing(false)
   }
 
-  async function handleLogout() {
-    await logout()
-    navigate('login', { replace: true })
-  }
-
-  if (error) return <div className="p-6 text-sm text-destructive">{error}</div>
-  if (!items) return <div className="p-6 text-sm text-muted-foreground">불러오는 중...</div>
+  if (error) return <AdminLayout><div className="p-6 text-sm text-destructive">{error}</div></AdminLayout>
+  if (!items) return <AdminLayout><div className="p-6 text-sm text-muted-foreground">불러오는 중...</div></AdminLayout>
 
   return (
-    <div className="min-h-dvh bg-white">
+    <AdminLayout>
       <div className="border-b border-[#dcdcdc] px-6 py-6">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <h1 className="text-2xl font-bold text-[#0a0a0a]">참여자 ({items.length})</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="목록 새로고침"
-              onClick={handleRefresh}
-              disabled={refreshing}
-            >
-              <RefreshCw className={refreshing ? 'animate-spin' : ''} />
-            </Button>
-            <Button variant="outline" className="rounded-[10px] border-[#c9c9c9] px-4 py-1.5 text-base font-medium text-[#0a0a0a]" onClick={handleLogout}>
-              로그아웃
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="목록 새로고침"
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={refreshing ? 'animate-spin' : ''} />
+          </Button>
         </div>
       </div>
 
@@ -118,6 +109,6 @@ export function ListPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </AdminLayout>
   )
 }
