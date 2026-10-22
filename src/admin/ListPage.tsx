@@ -89,23 +89,23 @@ export function ListPage() {
               </tr>
             )}
             {items.map((s) => (
-              <tr key={s.id} className="cursor-pointer border-b border-[#b7b7b7]" onClick={() => navigate(s.id)}>
-                <td className="px-2 py-[22px] text-lg text-[#0a0a0a]">{s.nickname}</td>
-                <td className="px-2 py-[22px] text-center text-lg text-[#0a0a0a]">{categoryLabel(s.category)}</td>
-                <td className="px-2 py-[22px] text-center text-lg text-[#0a0a0a]">{s.lackingElement}</td>
-                <td className="px-2 py-[20px] text-center">
+              <tr key={s.id} className="h-[52px] cursor-pointer border-b border-[#b7b7b7]" onClick={() => navigate(s.id)}>
+                <td className="px-2 align-middle text-base text-[#0a0a0a]">{s.nickname}</td>
+                <td className="px-2 text-center align-middle text-base text-[#0a0a0a]">{categoryLabel(s.category)}</td>
+                <td className="px-2 text-center align-middle text-base text-[#0a0a0a]">{s.lackingElement}</td>
+                <td className="px-2 text-center align-middle">
                   {s.selectedTalismanId ? (
-                    <span className="inline-flex items-center gap-3 text-lg text-[#0a0a0a]">
+                    <span className="inline-flex items-center gap-3 text-base text-[#0a0a0a]">
                       {talismanLabel(s.selectedTalismanId)}
                       {s.selectedBy === 'admin' && (
                         <span className="rounded-full bg-[#565656] px-4 py-0.5 text-sm text-white">관리자 수정</span>
                       )}
                     </span>
                   ) : (
-                    <span className="text-lg text-[#0a0a0a]">-</span>
+                    <span className="text-base text-[#0a0a0a]">-</span>
                   )}
                 </td>
-                <td className="px-2 py-[22px] text-lg whitespace-pre text-[#0a0a0a]">
+                <td className="px-2 align-middle text-base whitespace-pre text-[#0a0a0a]">
                   {new Date(s.createdAt).toLocaleString('ko-KR')}
                 </td>
               </tr>
