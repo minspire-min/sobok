@@ -94,20 +94,30 @@ async function generateReading(submission: Submission): Promise<{ text: string }
     })
   } catch (e) {
     const reason = e instanceof Error ? e.message : String(e)
-    console.error('[admin-reading] fetch failed:', reason)
+    console.error(`[admin-reading] fetch failed: ${reason}`)
     return { error: `요청 실패: ${reason}` }
   }
 
   if (!res.ok) {
-    const bodyText = await res.text().catch(() => '')
-    console.error(`[admin-reading] anthropic api error ${res.status}:`, bodyText)
+    const bodyText = (await res.text().catch(() => '')).slice(0, 500)
+    console.error(`[admin-reading] anthropic api error ${res.status}: ${bodyText}`)
     return { error: `anthropic api error: ${res.status}` }
   }
-  const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> }
+  const data = (await res.json()) as {
+    content?: Array<{ type: string; text?: string }>
+    stop_reason?: string
+    type?: string
+    error?: { type?: string; message?: string }
+  }
   const text = data.content?.find((c) => c.type === 'text')?.text
   if (!text) {
-    console.error('[admin-reading] empty response, raw data:', JSON.stringify(data))
-    return { error: 'empty response' }
+    // console.error를 여러 인자로 쪼개서 넘기면 Netlify 로그 파이프라인에서 메시지가
+    // 통째로 비어 보이는 문제가 있어(실제 확인됨) 문자열 하나로 합쳐서 남긴다.
+    const blockTypes = (data.content ?? []).map((c) => c.type).join(',')
+    console.error(
+      `[admin-reading] empty response | type=${data.type} stop_reason=${data.stop_reason} blocks=[${blockTypes}] apiError=${data.error?.type}:${data.error?.message}`,
+    )
+    return { error: `empty response (stop_reason=${data.stop_reason ?? 'unknown'})` }
   }
   return { text }
 }

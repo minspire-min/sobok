@@ -1,5 +1,6 @@
-import { LogOut, Users } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { logout } from './api'
@@ -19,6 +20,7 @@ type Props = {
 // 참여자 목록/상세/통계 화면이 전부 공유하는 좌측 사이드바 레이아웃.
 export function AdminLayout({ children }: Props) {
   const navigate = useNavigate()
+  const [collapsed, setCollapsed] = useState(false)
 
   async function handleLogout() {
     await logout()
@@ -27,34 +29,50 @@ export function AdminLayout({ children }: Props) {
 
   return (
     <div className="flex min-h-dvh bg-white">
-      <aside className="flex w-[240px] shrink-0 flex-col border-r border-[#e5e5e5] bg-[#fafafa] p-4">
-        <p className="mb-4 px-3 text-lg font-bold text-[#0a0a0a]">사주 만세력</p>
+      <aside
+        className={`relative flex shrink-0 flex-col border-r border-[#e5e5e5] bg-[#fafafa] p-4 ${
+          collapsed ? 'w-[68px]' : 'w-[240px]'
+        }`}
+      >
+        <button
+          type="button"
+          aria-label={collapsed ? '메뉴 펼치기' : '메뉴 접기'}
+          onClick={() => setCollapsed((v) => !v)}
+          className="absolute top-4 -right-3 flex size-6 items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#525252] shadow-sm hover:bg-[#f0f0f0]"
+        >
+          {collapsed ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
+        </button>
+
+        {!collapsed && <p className="mb-4 px-3 text-lg font-bold text-[#0a0a0a]">사주 만세력</p>}
 
         <nav className="flex flex-col gap-1">
-          <NavLink to={BASE} end className={navClass}>
+          <NavLink to={BASE} end title="참여자 목록" className={navClass}>
             <Users className="size-4" />
-            참여자 목록
+            {!collapsed && '참여자 목록'}
           </NavLink>
         </nav>
 
-        <p className="mt-6 mb-1 px-3 text-xs font-bold text-[#9a9a9a]">통계</p>
-        <nav className="flex flex-col gap-1">
-          <NavLink to={`${BASE}/stats/users`} className={navClass}>
-            사용자
+        {!collapsed && <p className="mt-6 mb-1 px-3 text-xs font-bold text-[#9a9a9a]">통계</p>}
+        <nav className={`flex flex-col gap-1 ${collapsed ? 'mt-6' : ''}`}>
+          <NavLink to={`${BASE}/stats/users`} title="사용자" className={navClass}>
+            {collapsed ? '사용' : '사용자'}
           </NavLink>
-          <NavLink to={`${BASE}/stats/sales`} className={navClass}>
-            매출 현황
+          <NavLink to={`${BASE}/stats/sales`} title="매출 현황" className={navClass}>
+            {collapsed ? '매출' : '매출 현황'}
           </NavLink>
         </nav>
 
         <div className="mt-auto pt-4">
           <Button
             variant="outline"
-            className="w-full justify-start gap-2 rounded-[10px] border-[#c9c9c9] text-sm text-[#0a0a0a]"
+            title="로그아웃"
+            className={`w-full rounded-[10px] border-[#c9c9c9] text-sm text-[#0a0a0a] ${
+              collapsed ? 'justify-center px-0' : 'justify-start gap-2'
+            }`}
             onClick={handleLogout}
           >
             <LogOut className="size-4" />
-            로그아웃
+            {!collapsed && '로그아웃'}
           </Button>
         </div>
       </aside>
