@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { PillarKey } from 'ssaju'
 import infoIcon from '../assets/icon-info.svg'
 import { STEM_CHARACTER } from '../lib/characters'
+import { computeFiveElementCounts } from '../lib/elementScore'
 import { BRANCH_ANIMAL, ELEMENT_COLOR, ELEMENT_COLOR_WORD, ELEMENT_ORDER, ELEMENT_OUTLINE_COLOR } from '../lib/elements'
 import { SINSAL_GLOSSARY, TEN_GOD_GLOSSARY, normalizeSinsalName, sinsalDisplayName } from '../lib/glossary'
 import { computeSaju } from '../lib/sajuPipeline'
@@ -51,7 +52,8 @@ export function SajuSummaryCard({ input }: Props) {
     return Array.from(tags)
   }, [pillarSals])
 
-  const maxElementCount = Math.max(1, ...ELEMENT_ORDER.map((el) => result.fiveElements[el] ?? 0))
+  const fiveElementCounts = useMemo(() => computeFiveElementCounts(result, timeUnknown), [result, timeUnknown])
+  const maxElementCount = Math.max(1, ...ELEMENT_ORDER.map((el) => fiveElementCounts[el] ?? 0))
 
   return (
     <div className="flex w-full max-w-[345px] flex-col items-center gap-8 md:max-w-[480px]">
@@ -188,7 +190,7 @@ export function SajuSummaryCard({ input }: Props) {
         <h2 className="font-['Mona12'] text-[16px] font-bold tracking-[-0.31px] md:text-[20px]">오행 분포</h2>
         <div className="flex w-full items-end gap-2">
           {ELEMENT_ORDER.map((el) => {
-            const count = result.fiveElements[el] ?? 0
+            const count = fiveElementCounts[el] ?? 0
             return (
               <div key={el} className="flex flex-1 flex-col items-center gap-1">
                 <div className="flex h-[68px] w-full items-end md:h-[90px]">

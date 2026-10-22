@@ -36,6 +36,10 @@ export function ListPage() {
 
   useEffect(() => {
     refresh()
+    // 수동 새로고침을 안 눌러도 방금 들어온 참여자가 자동으로 보이도록 주기적으로 갱신한다.
+    // 참여자 규모가 작은 행사라 3초 간격으로도 서버 부담은 거의 없다.
+    const timer = window.setInterval(refresh, 3000)
+    return () => window.clearInterval(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate])
 

@@ -104,6 +104,20 @@ function categoryRelation(category: CategoryKey, gender: '남' | '여'): Relatio
   }
 }
 
+// 오행 분포 막대그래프용 — 글자 개수 그대로(가중치 없음). PRD §3.6 "오행 분포 막대는 개수 기준".
+// ssaju가 반환하는 result.fiveElements는 시간 미상이어도 시(時)=00:00을 진짜 시각처럼 계산해
+// 가짜 시주를 끼워 넣는다 — computeElementScores와 똑같이 시주를 직접 제외해 다시 센다.
+export function computeFiveElementCounts(result: SajuResult, timeUnknown: boolean): Record<Element, number> {
+  const pillars = timeUnknown ? PILLAR_ORDER.filter((p) => p !== 'hour') : PILLAR_ORDER
+  const counts = Object.fromEntries(ELEMENT_ORDER.map((el) => [el, 0])) as Record<Element, number>
+  for (const pillar of pillars) {
+    const detail = result.pillarDetails[pillar]
+    counts[detail.element.stem as Element]++
+    counts[detail.element.branch as Element]++
+  }
+  return counts
+}
+
 export type LackingResult = {
   element: Element
   reason: 'lowest' | 'category' | 'random'
