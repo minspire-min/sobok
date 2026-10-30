@@ -306,3 +306,25 @@ export function classifyVisits(allItems: AdminSubmission[]): Map<string, VisitTy
   }
   return result
 }
+
+export function genderDistribution(items: AdminSubmission[]): { gender: '남' | '여'; count: number }[] {
+  const counts = { 남: 0, 여: 0 }
+  for (const s of items) counts[s.gender]++
+  return (['남', '여'] as const).map((gender) => ({ gender, count: counts[gender] }))
+}
+
+const AGE_BUCKET_LABELS = ['10대', '20대', '30대', '40대', '50대', '60대', '70대', '80대 이상'] as const
+
+// 만 나이까지는 필요 없는 분포 차트라 "올해 연도 - 출생 연도"로 간단히 센다(음력 출생이면
+// 생일 전후로 ±1 오차가 날 수 있지만 연령대 분포에선 무시할 수준). 10세 미만/80세 초과는
+// 각각 가장 가까운 끝 구간(10대/80대 이상)으로 묶는다.
+export function ageDistribution(items: AdminSubmission[], today: Date): { label: string; count: number }[] {
+  const counts = new Map<string, number>(AGE_BUCKET_LABELS.map((label) => [label, 0]))
+  for (const s of items) {
+    const age = today.getFullYear() - s.year
+    const decade = Math.min(80, Math.max(10, Math.floor(age / 10) * 10))
+    const label = decade >= 80 ? '80대 이상' : `${decade}대`
+    counts.set(label, (counts.get(label) ?? 0) + 1)
+  }
+  return AGE_BUCKET_LABELS.map((label) => ({ label, count: counts.get(label) ?? 0 }))
+}

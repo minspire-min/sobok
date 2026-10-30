@@ -5,9 +5,11 @@ import { CATEGORIES } from '../lib/categories'
 import { AdminLayout } from './AdminLayout'
 import { AdminAuthError, listPageVisits, listSubmissions } from './api'
 import {
+  ageDistribution,
   type Bucket,
   type DateRange,
   type Granularity,
+  genderDistribution,
   type JourneySummary,
   buildDailyBuckets,
   buildMonthlyBuckets,
@@ -40,6 +42,7 @@ const GRANULARITY_LABEL: Record<Granularity, string> = { daily: '일간', weekly
 
 const VISIT_LABEL = { first: '첫방문', repeat: '재방문', unknown: '미확인' } as const
 const VISIT_COLOR = { first: '#f31bc0', repeat: '#1c84e5', unknown: '#9a9a9a' } as const
+const GENDER_COLOR = { 남: '#1c84e5', 여: '#f31bc0' } as const
 
 function formatDwell(seconds: number | null): string {
   if (seconds === null) return '-'
@@ -156,7 +159,7 @@ function SimpleBarChart({ bars, percentBase }: { bars: SimpleBar[]; percentBase?
   if (sum === 0) return <p className="text-sm text-[#737373]">아직 데이터가 없어요.</p>
 
   return (
-    <div className="flex items-end justify-center gap-10">
+    <div className="flex items-end justify-center gap-10 overflow-x-auto pb-1">
       {bars.map((b) => (
         <div key={b.key} className="flex flex-col items-center gap-2">
           <div className="flex h-[180px] w-[64px] items-end">
@@ -245,6 +248,20 @@ export function StatsUsersPage() {
     label: VISIT_LABEL[type],
     count: visitCounts[type],
     color: VISIT_COLOR[type],
+  }))
+
+  const genderBars: SimpleBar[] = genderDistribution(periodItems).map((g) => ({
+    key: g.gender,
+    label: g.gender,
+    count: g.count,
+    color: GENDER_COLOR[g.gender],
+  }))
+
+  const ageBars: SimpleBar[] = ageDistribution(periodItems, today).map((a, i) => ({
+    key: a.label,
+    label: a.label,
+    count: a.count,
+    color: DONUT_COLORS[i % DONUT_COLORS.length],
   }))
 
   // 메인 진입 → (중도이탈 | 결과 페이지 도달) → 결과 화면에서 이탈, 하나로 합친 여정 퍼널.
@@ -449,6 +466,26 @@ export function StatsUsersPage() {
         <div className="grid grid-cols-2 gap-4">
           <Card className="rounded-[14px] border-0 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
             <CardHeader>
+              <CardTitle className="text-base">첫방문 / 재방문 / 미확인</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SimpleBarChart bars={visitTypeBars} />
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[14px] border-0 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
+            <CardHeader>
+              <CardTitle className="text-base">화면 체류 · 이탈 퍼널</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SimpleBarChart bars={journeyBars} percentBase={journey.entered} />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          <Card className="rounded-[14px] border-0 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
+            <CardHeader>
               <CardTitle className="text-base">고민 카테고리별 진입 수</CardTitle>
             </CardHeader>
             <CardContent>
@@ -458,20 +495,20 @@ export function StatsUsersPage() {
 
           <Card className="rounded-[14px] border-0 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
             <CardHeader>
-              <CardTitle className="text-base">첫방문 / 재방문 / 미확인</CardTitle>
+              <CardTitle className="text-base">성별 분포</CardTitle>
             </CardHeader>
             <CardContent>
-              <SimpleBarChart bars={visitTypeBars} />
+              <SimpleBarChart bars={genderBars} />
             </CardContent>
           </Card>
         </div>
 
         <Card className="mt-4 rounded-[14px] border-0 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
           <CardHeader>
-            <CardTitle className="text-base">화면 체류 · 이탈 퍼널</CardTitle>
+            <CardTitle className="text-base">연령 분포</CardTitle>
           </CardHeader>
           <CardContent>
-            <SimpleBarChart bars={journeyBars} percentBase={journey.entered} />
+            <SimpleBarChart bars={ageBars} />
           </CardContent>
         </Card>
       </div>
