@@ -33,7 +33,8 @@ function validateInput(body: unknown): { ok: true; id: string; input: Submission
   if (!Number.isInteger(b.year) || !Number.isInteger(b.month) || !Number.isInteger(b.day)) {
     return { ok: false, error: 'invalid date' }
   }
-  if (!Number.isInteger(b.hour) || !Number.isInteger(b.minute)) return { ok: false, error: 'invalid time' }
+  if (!Number.isInteger(b.hour) || (b.hour as number) < 0 || (b.hour as number) > 23) return { ok: false, error: 'invalid time' }
+  if (!Number.isInteger(b.minute) || (b.minute as number) < 0 || (b.minute as number) > 59) return { ok: false, error: 'invalid time' }
   if (typeof b.category !== 'string' || !CATEGORY_KEYS.has(b.category as (typeof CATEGORIES)[number]['key'])) {
     return { ok: false, error: 'invalid category' }
   }
@@ -76,19 +77,21 @@ function validateInput(body: unknown): { ok: true; id: string; input: Submission
   }
 }
 
-// PRD v2 §4.4 C4 — 같은 IP에서 짧은 시간 대량 제출 차단(1분 10건). 50명 규모라 정밀할 필요는 없음.
-async function isRateLimited(ip: string): Promise<boolean> {
+// PRD v2 §4.4 C4 — 같은 IP에서 짧은 시간 대량 요청 차단. 50명 규모라 정밀할 필요는 없음.
+// storeName을 나눠서 생성(POST)과 수정(PATCH) 한도를 따로 센다 — 하나가 한도를 채워도
+// 다른 쪽까지 막히지 않게.
+async function isRateLimited(ip: string, storeName: string, limit: number): Promise<boolean> {
   const bucket = `${ip}:${Math.floor(Date.now() / 60000)}`
-  const store = getStore('submission-rate-limit')
+  const store = getStore(storeName)
   const count = ((await store.get(bucket, { type: 'json' }).catch(() => null)) as number | null) ?? 0
-  if (count >= 10) return true
+  if (count >= limit) return true
   await store.setJSON(bucket, count + 1)
   return false
 }
 
 async function handleCreate(req: Request, context: Context): Promise<Response> {
   const ip = context.ip ?? 'unknown'
-  if (await isRateLimited(ip)) return json({ error: '잠시 후 다시 시도해 주세요' }, 429)
+  if (await isRateLimited(ip, 'submission-rate-limit', 10)) return json({ error: '잠시 후 다시 시도해 주세요' }, 429)
 
   let body: unknown
   try {
@@ -152,7 +155,12 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
   return json({ id: submission.id, talismanIds }, 201)
 }
 
-async function handleUpdateSelection(req: Request, id: string): Promise<Response> {
+async function handleUpdateSelection(req: Request, id: string, context: Context): Promise<Response> {
+  const ip = context.ip ?? 'unknown'
+  // 생성(10/분)보다 넉넉히 — 완료 후에도 재선택 가능해서(§3.8 R8) 같은 사람이 여러 번
+  // 호출할 수 있고, 클라이언트 재시도(최대 3회)도 여기로 들어온다.
+  if (await isRateLimited(ip, 'submission-patch-rate-limit', 20)) return json({ error: '잠시 후 다시 시도해 주세요' }, 429)
+
   let body: unknown
   try {
     body = await req.json()
@@ -183,7 +191,7 @@ export default async (req: Request, context: Context): Promise<Response> => {
   const id = context.params.id
 
   if (req.method === 'POST' && !id) return handleCreate(req, context)
-  if (req.method === 'PATCH' && id) return handleUpdateSelection(req, id)
+  if (req.method === 'PATCH' && id) return handleUpdateSelection(req, id, context)
 
   return json({ error: 'method not allowed' }, 405)
 }

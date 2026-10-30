@@ -5,11 +5,15 @@ import { createPageVisit, markPageVisitCompleted, sendExitBeacon } from './pageV
 // 숨겨지는 순간(앱 전환·화면 끄기·창 닫기 등)을 이탈 시점 근사치로 beacon 전송한다.
 export function usePageVisitTracking(page: 'main' | 'result') {
   const visitIdRef = useRef<string | null>(null)
+  // 생성 요청이 끝나기 전에 완료 처리가 먼저 호출되는 경쟁 상태(두 비동기 작업의 완료
+  // 순서가 보장되지 않아 생기는 버그) 대응 — markCompleted가 이 Promise를 기다려서
+  // visitIdRef가 아직 안 채워졌어도 완료 기록이 조용히 씹히지 않게 한다.
+  const visitIdPromiseRef = useRef<Promise<string | null> | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-    createPageVisit(page).then((id) => {
-      if (!cancelled) visitIdRef.current = id
+    visitIdPromiseRef.current = createPageVisit(page).then((id) => {
+      visitIdRef.current = id
+      return id
     })
 
     function handleVisibilityChange() {
@@ -20,14 +24,14 @@ export function usePageVisitTracking(page: 'main' | 'result') {
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
-      cancelled = true
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function markCompleted(submissionId?: string) {
-    if (visitIdRef.current) void markPageVisitCompleted(visitIdRef.current, submissionId)
+  async function markCompleted(submissionId?: string) {
+    const id = visitIdRef.current ?? (await visitIdPromiseRef.current)
+    if (id) void markPageVisitCompleted(id, submissionId)
   }
 
   return { markCompleted }
