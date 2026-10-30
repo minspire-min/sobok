@@ -6,18 +6,25 @@ import type { SajuFormInput } from './types'
 
 export type CreateSubmissionResponse = { id: string; talismanIds: [string, string, string] }
 
+// POST는 PATCH와 달리 재시도하면 매번 새 레코드가 생길 수 있어, id를 미리 만들어 매 시도마다
+// 같은 값으로 보낸다 — 서버가 응답을 못 받았을 뿐 실제로는 저장에 성공했어도 같은 id로 재시도하면
+// 중복 생성 없이 그 레코드를 그대로 돌려받는다(서버의 멱등 처리, submissions.ts 참고).
 export async function createSubmission(input: SajuFormInput): Promise<CreateSubmissionResponse | null> {
-  try {
-    const res = await fetch('/api/submissions', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(input),
-    })
-    if (!res.ok) return null
-    return (await res.json()) as CreateSubmissionResponse
-  } catch {
-    return null
+  const id = crypto.randomUUID()
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...input, id }),
+      })
+      if (res.ok) return (await res.json()) as CreateSubmissionResponse
+    } catch {
+      // 재시도
+    }
+    if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 500))
   }
+  return null
 }
 
 // 이 요청이 조용히 한 번 실패하면 관리자 통계의 "확인 수"가 그대로 누락된다(행사장

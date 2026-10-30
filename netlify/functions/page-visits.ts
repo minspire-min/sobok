@@ -2,6 +2,8 @@ import type { Config, Context } from '@netlify/functions'
 import { getStore } from '@netlify/blobs'
 import type { PageVisit } from './_shared/types.ts'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } })
 }
@@ -26,12 +28,18 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
   } catch {
     return json({ error: 'invalid json' }, 400)
   }
-  const page = (body as { page?: unknown }).page
+  const { page, id } = body as { page?: unknown; id?: unknown }
   if (page !== 'main' && page !== 'result') return json({ error: 'invalid page' }, 400)
+  if (typeof id !== 'string' || !UUID_RE.test(id)) return json({ error: 'invalid id' }, 400)
+
+  const store = getStore('page-visits')
+  // submissions.ts와 동일한 이유 — 응답을 못 받아 재시도해도 같은 id면 중복 생성 없이 그대로 돌려준다.
+  const already = (await store.get(id, { type: 'json' }).catch(() => null)) as PageVisit | null
+  if (already) return json({ id: already.id }, 201)
 
   const now = new Date().toISOString()
   const visit: PageVisit = {
-    id: crypto.randomUUID(),
+    id,
     page,
     enteredAt: now,
     lastSeenAt: now,
@@ -39,7 +47,7 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
     completedAt: null,
     submissionId: null,
   }
-  await getStore('page-visits').setJSON(visit.id, visit)
+  await store.setJSON(visit.id, visit)
   return json({ id: visit.id }, 201)
 }
 

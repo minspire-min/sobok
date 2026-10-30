@@ -8,15 +8,20 @@ import { validateForm } from '../../src/lib/validation.ts'
 import type { Submission, SubmissionInput } from './_shared/types.ts'
 
 const CATEGORY_KEYS = new Set(CATEGORIES.map((c) => c.key))
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } })
 }
 
 // PRD v2 §4.4 C3 — 화면 검증만 믿지 않고 서버에서도 다시 검사한다.
-function validateInput(body: unknown): { ok: true; input: SubmissionInput } | { ok: false; error: string } {
+function validateInput(body: unknown): { ok: true; id: string; input: SubmissionInput } | { ok: false; error: string } {
   if (typeof body !== 'object' || body === null) return { ok: false, error: 'invalid body' }
   const b = body as Record<string, unknown>
+
+  // 클라이언트가 생성 시점에 만든 id — 응답을 못 받아 재시도해도 같은 id면 같은 레코드로
+  // 취급해 중복 제출을 막는다(멱등 생성).
+  if (typeof b.id !== 'string' || !UUID_RE.test(b.id)) return { ok: false, error: 'invalid id' }
 
   if (typeof b.nickname !== 'string' || !b.nickname.trim() || b.nickname.trim().length > 20) {
     return { ok: false, error: 'invalid nickname' }
@@ -53,6 +58,7 @@ function validateInput(body: unknown): { ok: true; input: SubmissionInput } | { 
 
   return {
     ok: true,
+    id: b.id,
     input: {
       nickname,
       gender: b.gender,
@@ -93,7 +99,13 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
 
   const result = validateInput(body)
   if (!result.ok) return json({ error: result.error }, 400)
-  const input = result.input
+  const { id, input } = result
+
+  const store = getStore('submissions')
+  // 응답을 못 받아 클라이언트가 같은 id로 재시도한 경우 — 새로 계산/저장하지 않고 그대로
+  // 돌려준다(POST 재시도로 인한 중복 생성 방지).
+  const already = (await store.get(id, { type: 'json' }).catch(() => null)) as Submission | null
+  if (already) return json({ id: already.id, talismanIds: already.talismanIds }, 201)
 
   // PRD "절대 원칙" — 계산은 코드가 한다. 클라이언트와 동일한 lib을 그대로 재사용.
   // SubmissionInput은 SajuFormInput과 구조가 같아(닉네임/성별/달력/시각/카테고리/동의) 그대로 넘길 수 있다.
@@ -106,7 +118,7 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
 
   const now = new Date().toISOString()
   const submission: Submission = {
-    id: crypto.randomUUID(),
+    id,
     createdAt: now,
     consentAt: now,
     nickname: input.nickname,
@@ -135,7 +147,7 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
     memoUpdatedAt: null,
   }
 
-  await getStore('submissions').setJSON(submission.id, submission)
+  await store.setJSON(submission.id, submission)
 
   return json({ id: submission.id, talismanIds }, 201)
 }

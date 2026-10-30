@@ -1,18 +1,23 @@
 // R12 체류시간 추적 — 실패해도 참여자 경험은 전혀 막지 않는다(best-effort, 전부 조용히 무시).
 
+// id를 미리 만들어 매 시도마다 같은 값으로 보낸다 — submissionApi.ts의 createSubmission과
+// 같은 이유(POST 재시도로 인한 중복 생성 방지, 서버의 멱등 처리는 page-visits.ts 참고).
 export async function createPageVisit(page: 'main' | 'result'): Promise<string | null> {
-  try {
-    const res = await fetch('/api/page-visits', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ page }),
-    })
-    if (!res.ok) return null
-    const data = (await res.json()) as { id: string }
-    return data.id
-  } catch {
-    return null
+  const id = crypto.randomUUID()
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch('/api/page-visits', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ page, id }),
+      })
+      if (res.ok) return id
+    } catch {
+      // 재시도
+    }
+    if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 500))
   }
+  return null
 }
 
 export function sendExitBeacon(id: string): void {
