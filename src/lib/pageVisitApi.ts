@@ -21,14 +21,20 @@ export function sendExitBeacon(id: string): void {
   navigator.sendBeacon?.(`/api/page-visits/${id}/exit`, new Blob([body], { type: 'application/json' }))
 }
 
+// 이 요청이 조용히 한 번 실패하면 관리자 통계의 체류시간 퍼널 "완료" 수치가 그대로
+// 누락된다(행사장 네트워크 혼잡 때 실제로 발생). 최대 3번, 짧은 대기를 두고 재시도한다.
 export async function markPageVisitCompleted(id: string, submissionId?: string): Promise<void> {
-  try {
-    await fetch(`/api/page-visits/${id}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ completed: true, submissionId }),
-    })
-  } catch {
-    // best-effort
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(`/api/page-visits/${id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ completed: true, submissionId }),
+      })
+      if (res.ok) return
+    } catch {
+      // 재시도
+    }
+    if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 500))
   }
 }

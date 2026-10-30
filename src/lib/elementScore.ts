@@ -124,6 +124,16 @@ export type LackingResult = {
   tiedElements: Element[]
 }
 
+// ③에서 Math.random() 대신 쓰는 결정론적 선택 — 같은 입력(점수·카테고리·일간·성별)이면
+// 클라이언트/서버/재방문 어디서 계산해도 항상 같은 결과가 나오게 한다(djb2 해시).
+function hashIndex(seed: string, modulo: number): number {
+  let hash = 5381
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 33 + seed.charCodeAt(i)) >>> 0
+  }
+  return hash % modulo
+}
+
 // 판정 순서(§3.6): ① 최저 1개면 그대로 ② 동점+카테고리 연관 오행이 그 안에 있으면 그 오행
 // ③ 동점+연관 없음(또는 연관 없는 카테고리)이면 동점 중 랜덤
 export function determineLackingElement(
@@ -147,6 +157,7 @@ export function determineLackingElement(
     }
   }
 
-  const picked = tiedElements[Math.floor(Math.random() * tiedElements.length)]
+  const seed = `${category}-${gender}-${dayElement}-${ELEMENT_ORDER.map((el) => scores[el]).join(',')}`
+  const picked = tiedElements[hashIndex(seed, tiedElements.length)]
   return { element: picked, reason: 'random', tiedElements }
 }

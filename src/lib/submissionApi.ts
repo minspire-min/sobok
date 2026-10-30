@@ -20,15 +20,21 @@ export async function createSubmission(input: SajuFormInput): Promise<CreateSubm
   }
 }
 
+// 이 요청이 조용히 한 번 실패하면 관리자 통계의 "확인 수"가 그대로 누락된다(행사장
+// 네트워크 혼잡 때 실제로 발생). 최대 3번, 짧은 대기를 두고 재시도한다.
 export async function updateSubmissionSelection(id: string, talismanId: string | null): Promise<boolean> {
-  try {
-    const res = await fetch(`/api/submissions/${id}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ talismanId }),
-    })
-    return res.ok
-  } catch {
-    return false
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(`/api/submissions/${id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ talismanId }),
+      })
+      if (res.ok) return true
+    } catch {
+      // 재시도
+    }
+    if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 500))
   }
+  return false
 }
