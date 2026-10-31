@@ -1,5 +1,6 @@
 import type { Config, Context } from '@netlify/functions'
 import { getStore } from '@netlify/blobs'
+import { isRateLimited } from './_shared/rateLimit.ts'
 import type { PageVisit } from './_shared/types.ts'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -11,14 +12,6 @@ function json(data: unknown, status = 200): Response {
 // submissions.ts와 동일한 분당 제한 패턴. 체류 추적은 요청이 더 잦을 수 있어 넉넉히 둔다.
 // key는 호출하는 쪽이 정한다: 생성(POST)은 IP 기준, 완료/이탈 beacon은 id 기준(행사장 공유
 // 와이파이에서 다른 사람들 때문에 내 요청이 막히지 않도록 — submissions.ts 주석 참고).
-async function isRateLimited(key: string, storeName: string, limit: number): Promise<boolean> {
-  const bucket = `${key}:${Math.floor(Date.now() / 60000)}`
-  const store = getStore(storeName)
-  const count = ((await store.get(bucket, { type: 'json' }).catch(() => null)) as number | null) ?? 0
-  if (count >= limit) return true
-  await store.setJSON(bucket, count + 1)
-  return false
-}
 
 async function handleCreate(req: Request, context: Context): Promise<Response> {
   const ip = context.ip ?? 'unknown'

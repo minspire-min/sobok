@@ -2,7 +2,8 @@ import type { Config, Context } from '@netlify/functions'
 import { getStore } from '@netlify/blobs'
 import { CATEGORIES } from '../../src/lib/categories.ts'
 import { computeSaju } from '../../src/lib/sajuPipeline.ts'
-import { requireAdminSession } from './_shared/auth.ts'
+import { parseCookie, requireAdminSession, SESSION_COOKIE } from './_shared/auth.ts'
+import { isRateLimited } from './_shared/rateLimit.ts'
 import type { Submission } from './_shared/types.ts'
 
 function json(data: unknown, status = 200): Response {
@@ -129,6 +130,14 @@ async function generateReading(submission: Submission): Promise<{ text: string }
 export default async (req: Request, context: Context): Promise<Response> => {
   if (!(await requireAdminSession(req))) return json({ error: 'unauthorized' }, 401)
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405)
+
+  // 세션 쿠키가 탈취되면 건당 비용이 드는 AI 호출을 제출 id를 바꿔가며 무제한 반복할 수
+  // 있었음("한 번만 생성" 가드는 같은 제출 안에서만 막아 줌) — 세션 토큰 기준으로 분당
+  // 호출 횟수를 제한해 비용 남용을 막는다.
+  const sessionToken = parseCookie(req.headers.get('cookie'), SESSION_COOKIE) ?? 'unknown'
+  if (await isRateLimited(sessionToken, 'admin-reading-rate-limit', 20)) {
+    return json({ error: '잠시 후 다시 시도해 주세요' }, 429)
+  }
 
   const id = context.params.id
   if (!id) return json({ error: 'missing id' }, 400)

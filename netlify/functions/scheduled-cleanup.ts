@@ -4,15 +4,17 @@ import type { PageVisit, Submission } from './_shared/types.ts'
 
 const RETENTION_MS = 15 * 24 * 60 * 60 * 1000 // PRD §3.12/§4.1 — 접수 후 15일
 
-// submissions.ts/page-visits.ts의 isRateLimited가 쓰는 분당 버킷 저장소들 — 버킷 키가
+// _shared/rateLimit.ts의 isRateLimited가 쓰는 분당 버킷 저장소들 — 버킷 키가
 // "...:분단위타임스탬프" 형태라 1분만 지나도 다시 안 쓰인다. @netlify/blobs엔 TTL(자동 만료)이
 // 없어서 안 지우면 영구히 쌓인다 — 1시간(버킷 수명보다 충분히 긴 여유)보다 오래된 건 전부 지운다.
+// 새 rate limit을 추가하면 여기도 같이 등록해야 한다.
 const RATE_LIMIT_STORES = [
   'submission-rate-limit',
   'submission-patch-rate-limit',
   'page-visit-rate-limit',
   'page-visit-complete-rate-limit',
   'page-visit-exit-rate-limit',
+  'admin-reading-rate-limit',
 ]
 const RATE_LIMIT_BUCKET_MAX_AGE_MS = 60 * 60 * 1000
 
@@ -25,6 +27,38 @@ async function cleanupRateLimitStore(now: number, storeName: string): Promise<nu
     const minuteBucket = Number(b.key.slice(b.key.lastIndexOf(':') + 1))
     if (!Number.isFinite(minuteBucket)) continue
     if (now - minuteBucket * 60000 > RATE_LIMIT_BUCKET_MAX_AGE_MS) {
+      await store.delete(b.key)
+      deleted++
+    }
+  }
+  return deleted
+}
+
+// 로그인 시도 기록(10분 차단 지나도 lastAttemptAt만 보고 24시간 지나면 정리)과 세션(만료
+// 시각 지난 것) — 둘 다 자동 만료가 없어 안 지우면 영구히 쌓인다.
+const LOGIN_ATTEMPT_STALE_MS = 24 * 60 * 60 * 1000
+
+async function cleanupLoginAttempts(now: number): Promise<number> {
+  const store = getStore('admin-login-attempts')
+  const { blobs } = await store.list()
+  let deleted = 0
+  for (const b of blobs) {
+    const record = (await store.get(b.key, { type: 'json' }).catch(() => null)) as { lastAttemptAt?: number } | null
+    if (!record || !record.lastAttemptAt || now - record.lastAttemptAt > LOGIN_ATTEMPT_STALE_MS) {
+      await store.delete(b.key)
+      deleted++
+    }
+  }
+  return deleted
+}
+
+async function cleanupSessions(now: number): Promise<number> {
+  const store = getStore('admin-sessions')
+  const { blobs } = await store.list()
+  let deleted = 0
+  for (const b of blobs) {
+    const record = (await store.get(b.key, { type: 'json' }).catch(() => null)) as { expiresAt?: number } | null
+    if (!record || !record.expiresAt || record.expiresAt < now) {
       await store.delete(b.key)
       deleted++
     }
@@ -66,8 +100,11 @@ export default async (): Promise<Response> => {
     deletedRateLimitBuckets += await cleanupRateLimitStore(now, storeName)
   }
 
+  const deletedLoginAttempts = await cleanupLoginAttempts(now)
+  const deletedSessions = await cleanupSessions(now)
+
   return new Response(
-    JSON.stringify({ deletedSubmissions, deletedVisits, deletedRateLimitBuckets }),
+    JSON.stringify({ deletedSubmissions, deletedVisits, deletedRateLimitBuckets, deletedLoginAttempts, deletedSessions }),
     { status: 200, headers: { 'content-type': 'application/json' } },
   )
 }

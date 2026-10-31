@@ -5,6 +5,7 @@ import { computeElementScores, determineLackingElement } from '../../src/lib/ele
 import { computeSaju } from '../../src/lib/sajuPipeline.ts'
 import { getTalismans } from '../../src/lib/talismans.ts'
 import { validateForm } from '../../src/lib/validation.ts'
+import { isRateLimited } from './_shared/rateLimit.ts'
 import type { Submission, SubmissionInput } from './_shared/types.ts'
 
 const CATEGORY_KEYS = new Set(CATEGORIES.map((c) => c.key))
@@ -81,14 +82,6 @@ function validateInput(body: unknown): { ok: true; id: string; input: Submission
 // key는 호출하는 쪽이 정한다: 생성(POST)은 IP 기준(한 사람이 대량 제출하는 걸 막는 목적),
 // 수정(PATCH)/이탈 beacon은 id 기준(특정 id가 유출돼 남용되는 걸 막는 목적 — 행사장 공유
 // 와이파이에서 다른 사람들 때문에 내 요청이 막히면 안 되니 IP로 묶지 않는다).
-async function isRateLimited(key: string, storeName: string, limit: number): Promise<boolean> {
-  const bucket = `${key}:${Math.floor(Date.now() / 60000)}`
-  const store = getStore(storeName)
-  const count = ((await store.get(bucket, { type: 'json' }).catch(() => null)) as number | null) ?? 0
-  if (count >= limit) return true
-  await store.setJSON(bucket, count + 1)
-  return false
-}
 
 async function handleCreate(req: Request, context: Context): Promise<Response> {
   const ip = context.ip ?? 'unknown'

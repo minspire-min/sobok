@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { getStore } from '@netlify/blobs'
 
 const SESSION_COOKIE = 'saju_admin_session'
@@ -11,6 +12,14 @@ function sessionsStore() {
 
 function attemptsStore() {
   return getStore('admin-login-attempts')
+}
+
+// 비교 시간 차이로 한 글자씩 정답을 추측하는 타이밍 공격을 막는다 — 먼저 고정 길이(32바이트)로
+// 해시한 뒤 비교하면 입력 길이·내용 모두 비교 소요 시간에 영향을 주지 않는다.
+export function constantTimeEqual(a: string, b: string): boolean {
+  const hashA = createHash('sha256').update(a).digest()
+  const hashB = createHash('sha256').update(b).digest()
+  return timingSafeEqual(hashA, hashB)
 }
 
 export function parseCookie(cookieHeader: string | null, name: string): string | null {
@@ -35,7 +44,9 @@ export async function recordLoginFailure(ip: string): Promise<void> {
   const record = (await store.get(ip, { type: 'json' }).catch(() => null)) as { count: number; lockedUntil: number } | null
   const count = (record?.count ?? 0) + 1
   const lockedUntil = count >= MAX_ATTEMPTS ? Date.now() + LOCKOUT_MS : 0
-  await store.setJSON(ip, { count, lockedUntil })
+  // lastAttemptAt — scheduled-cleanup.ts가 한참 조용한(= 더 이상 공격/실수가 없는) IP의
+  // 시도 기록을 정리할 때 기준으로 쓴다.
+  await store.setJSON(ip, { count, lockedUntil, lastAttemptAt: Date.now() })
 }
 
 export async function clearLoginFailures(ip: string): Promise<void> {
