@@ -77,11 +77,12 @@ function validateInput(body: unknown): { ok: true; id: string; input: Submission
   }
 }
 
-// PRD v2 §4.4 C4 — 같은 IP에서 짧은 시간 대량 요청 차단. 50명 규모라 정밀할 필요는 없음.
-// storeName을 나눠서 생성(POST)과 수정(PATCH) 한도를 따로 센다 — 하나가 한도를 채워도
-// 다른 쪽까지 막히지 않게.
-async function isRateLimited(ip: string, storeName: string, limit: number): Promise<boolean> {
-  const bucket = `${ip}:${Math.floor(Date.now() / 60000)}`
+// PRD v2 §4.4 C4 — 짧은 시간 대량 요청 차단. 50명 규모라 정밀할 필요는 없음.
+// key는 호출하는 쪽이 정한다: 생성(POST)은 IP 기준(한 사람이 대량 제출하는 걸 막는 목적),
+// 수정(PATCH)/이탈 beacon은 id 기준(특정 id가 유출돼 남용되는 걸 막는 목적 — 행사장 공유
+// 와이파이에서 다른 사람들 때문에 내 요청이 막히면 안 되니 IP로 묶지 않는다).
+async function isRateLimited(key: string, storeName: string, limit: number): Promise<boolean> {
+  const bucket = `${key}:${Math.floor(Date.now() / 60000)}`
   const store = getStore(storeName)
   const count = ((await store.get(bucket, { type: 'json' }).catch(() => null)) as number | null) ?? 0
   if (count >= limit) return true
@@ -155,11 +156,10 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
   return json({ id: submission.id, talismanIds }, 201)
 }
 
-async function handleUpdateSelection(req: Request, id: string, context: Context): Promise<Response> {
-  const ip = context.ip ?? 'unknown'
-  // 생성(10/분)보다 넉넉히 — 완료 후에도 재선택 가능해서(§3.8 R8) 같은 사람이 여러 번
-  // 호출할 수 있고, 클라이언트 재시도(최대 3회)도 여기로 들어온다.
-  if (await isRateLimited(ip, 'submission-patch-rate-limit', 20)) return json({ error: '잠시 후 다시 시도해 주세요' }, 429)
+async function handleUpdateSelection(req: Request, id: string): Promise<Response> {
+  // id 기준(위 isRateLimited 주석 참고) — 완료 후에도 재선택 가능해서(§3.8 R8) 같은 사람이
+  // 여러 번 호출할 수 있고, 클라이언트 재시도(최대 3회)도 여기로 들어온다.
+  if (await isRateLimited(id, 'submission-patch-rate-limit', 20)) return json({ error: '잠시 후 다시 시도해 주세요' }, 429)
 
   let body: unknown
   try {
@@ -191,7 +191,7 @@ export default async (req: Request, context: Context): Promise<Response> => {
   const id = context.params.id
 
   if (req.method === 'POST' && !id) return handleCreate(req, context)
-  if (req.method === 'PATCH' && id) return handleUpdateSelection(req, id, context)
+  if (req.method === 'PATCH' && id) return handleUpdateSelection(req, id)
 
   return json({ error: 'method not allowed' }, 405)
 }

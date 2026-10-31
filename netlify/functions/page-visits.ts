@@ -8,11 +8,11 @@ function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } })
 }
 
-// submissions.ts와 동일한 분당-IP 제한 패턴. 체류 추적은 요청이 더 잦을 수 있어 넉넉히 둔다.
-// storeName으로 생성/완료/이탈 beacon 한도를 따로 센다 — 하나가 한도를 채워도 다른 쪽까지
-// 막히지 않게.
-async function isRateLimited(ip: string, storeName: string, limit: number): Promise<boolean> {
-  const bucket = `${ip}:${Math.floor(Date.now() / 60000)}`
+// submissions.ts와 동일한 분당 제한 패턴. 체류 추적은 요청이 더 잦을 수 있어 넉넉히 둔다.
+// key는 호출하는 쪽이 정한다: 생성(POST)은 IP 기준, 완료/이탈 beacon은 id 기준(행사장 공유
+// 와이파이에서 다른 사람들 때문에 내 요청이 막히지 않도록 — submissions.ts 주석 참고).
+async function isRateLimited(key: string, storeName: string, limit: number): Promise<boolean> {
+  const bucket = `${key}:${Math.floor(Date.now() / 60000)}`
   const store = getStore(storeName)
   const count = ((await store.get(bucket, { type: 'json' }).catch(() => null)) as number | null) ?? 0
   if (count >= limit) return true
@@ -55,10 +55,9 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
 
 // navigator.sendBeacon은 POST만 지원해서, 탭 숨김/이탈 시점 beacon은 PATCH가 아니라 이 전용
 // POST 엔드포인트로 받는다.
-async function handleExitBeacon(req: Request, id: string, context: Context): Promise<Response> {
-  const ip = context.ip ?? 'unknown'
+async function handleExitBeacon(req: Request, id: string): Promise<Response> {
   // 탭을 왔다 갔다 할 때마다 반복 호출될 수 있어 넉넉히 둔다.
-  if (await isRateLimited(ip, 'page-visit-exit-rate-limit', 60)) return json({ error: '잠시 후 다시 시도해 주세요' }, 429)
+  if (await isRateLimited(id, 'page-visit-exit-rate-limit', 60)) return json({ error: '잠시 후 다시 시도해 주세요' }, 429)
 
   let body: unknown
   try {
@@ -78,10 +77,9 @@ async function handleExitBeacon(req: Request, id: string, context: Context): Pro
   return json({ ok: true })
 }
 
-async function handleComplete(req: Request, id: string, context: Context): Promise<Response> {
-  const ip = context.ip ?? 'unknown'
+async function handleComplete(req: Request, id: string): Promise<Response> {
   // 클라이언트 재시도(최대 3회)가 여기로 들어온다 — 생성(30/분)보다 넉넉히 둔다.
-  if (await isRateLimited(ip, 'page-visit-complete-rate-limit', 20)) return json({ error: '잠시 후 다시 시도해 주세요' }, 429)
+  if (await isRateLimited(id, 'page-visit-complete-rate-limit', 20)) return json({ error: '잠시 후 다시 시도해 주세요' }, 429)
 
   let body: unknown
   try {
@@ -108,8 +106,8 @@ export default async (req: Request, context: Context): Promise<Response> => {
   const isExitBeacon = context.params.action === 'exit'
 
   if (req.method === 'POST' && !id) return handleCreate(req, context)
-  if (req.method === 'POST' && id && isExitBeacon) return handleExitBeacon(req, id, context)
-  if (req.method === 'PATCH' && id) return handleComplete(req, id, context)
+  if (req.method === 'POST' && id && isExitBeacon) return handleExitBeacon(req, id)
+  if (req.method === 'PATCH' && id) return handleComplete(req, id)
 
   return json({ error: 'method not allowed' }, 405)
 }
