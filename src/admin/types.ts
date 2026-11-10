@@ -32,6 +32,11 @@ export type AdminSubmission = {
   readingFailedAt: string | null
   memo: string
   memoUpdatedAt: string | null
+
+  // 15일 경과 시 개인정보를 파기하고 집계 지표만 남긴 상태. anonymizedAt이 있으면 닉네임·생월일 등은
+  // 비워져 있고, 첫/재방문은 파기 직전 동결된 visitType으로 읽는다(stats.classifyVisits 참고).
+  anonymizedAt?: string | null
+  visitType?: 'first' | 'repeat' | 'unknown'
 }
 
 export type AdminPageVisit = {

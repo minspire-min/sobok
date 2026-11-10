@@ -86,7 +86,9 @@ export function ListPage() {
             )}
             {items.map((s) => (
               <tr key={s.id} className="h-[52px] cursor-pointer border-b border-[#b7b7b7]" onClick={() => navigate(s.id)}>
-                <td className="px-2 align-middle text-base text-[#0a0a0a]">{s.nickname}</td>
+                <td className="px-2 align-middle text-base text-[#0a0a0a]">
+                  {s.anonymizedAt ? <span className="text-[#9a9a9a]">(개인정보 파기됨)</span> : s.nickname}
+                </td>
                 <td className="px-2 text-center align-middle text-base text-[#0a0a0a]">{categoryLabel(s.category)}</td>
                 <td className="px-2 text-center align-middle text-base text-[#0a0a0a]">{s.lackingElement}</td>
                 <td className="px-2 text-center align-middle">

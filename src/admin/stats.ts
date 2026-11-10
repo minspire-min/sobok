@@ -84,6 +84,26 @@ export const MAX_WEEKLY_SPAN_WEEKS = 6
 export const MAX_MONTHLY_SPAN_MONTHS = 12
 export const MAX_YEARLY_SPAN_YEARS = 10
 
+// 구 scheduled-cleanup이 접수 15일 경과 제출을 "통째로" 삭제하던 시절(→ 익명화로 수정됨)에
+// 10월 제출이 블롭에서 소실됐다. 블롭엔 복구 수단이 없어, GA4(G-MGFZ1KVBQR)에 남은 집계만 수동 백필한다.
+// GA가 보유한 지표는 진입(사용자/세션)과 확인(confirm_saju 이벤트)뿐이라 월간 '진입/확인 수'만
+// 복원되고, 카테고리/성별/연령/방문유형 분포는 GA에 없어 복원 불가(해당 월 분포 차트는 비어 보인다).
+// ponytail: 월 단위 수동 백필 — 소실 데이터 복원이라 일회성. 일간/주간엔 특정 일자가 없어 반영 안 됨.
+export type GaMonthlyBackfill = { monthKey: number; entered: number; confirmed: number }
+export const GA_MONTHLY_BACKFILL: GaMonthlyBackfill[] = [
+  // 2026년 10월 — 소실된 데이터를 GA4(G-MGFZ1KVBQR)에서 백필. 진입=10월 활성 사용자 17.
+  // 확인 수는 복원 불가: 당시 배포 버전엔 confirm_saju 이벤트가 없어 GA에 집계가 전혀 없음(=0).
+  { monthKey: 202610, entered: 17, confirmed: 0 },
+]
+
+// 백필은 "데이터가 소실된 달"을 대체하는 값이다 — 실제 저장된 제출이 있는 달엔 무시한다(이중 집계 방지).
+// 익명화 전환 후로는 달이 통째로 비는 일이 없으니, 백필은 과거 소실분(2026-10)에만 실제로 적용된다.
+function applyBackfill(key: number, real: { entered: number; confirmed: number }): { entered: number; confirmed: number } {
+  if (real.entered > 0) return real
+  const b = GA_MONTHLY_BACKFILL.find((x) => x.monthKey === key)
+  return b ? { entered: b.entered, confirmed: b.confirmed } : real
+}
+
 function countInBucket(items: AdminSubmission[], match: (d: Date) => boolean): { entered: number; confirmed: number } {
   let entered = 0
   let confirmed = 0
@@ -147,7 +167,8 @@ export function buildMonthlyBuckets(items: AdminSubmission[], range: MonthlyRang
   let m = startM
   while (y < endY || (y === endY && m <= endM)) {
     const key = monthKey(y, m)
-    const { entered, confirmed } = countInBucket(items, (sd) => sd.getFullYear() === y && sd.getMonth() + 1 === m)
+    const c = countInBucket(items, (sd) => sd.getFullYear() === y && sd.getMonth() + 1 === m)
+    const { entered, confirmed } = applyBackfill(key, c)
     buckets.push({ key, label: sameYear ? `${m}월` : `${String(y).slice(2)}.${m}월`, entered, confirmed })
     m++
     if (m > 12) {
@@ -161,8 +182,19 @@ export function buildMonthlyBuckets(items: AdminSubmission[], range: MonthlyRang
 export function buildYearlyBuckets(items: AdminSubmission[], range: YearlyRange): Bucket[] {
   const buckets: Bucket[] = []
   for (let y = range.start; y <= range.end; y++) {
-    const { entered, confirmed } = countInBucket(items, (sd) => sd.getFullYear() === y)
-    buckets.push({ key: y, label: `${y}년`, entered, confirmed })
+    const c = countInBucket(items, (sd) => sd.getFullYear() === y)
+    // 그 해의 백필 중 '실제 저장 데이터가 없는 달'만 더한다(실데이터 있는 달은 이미 c에 포함 → 중복 방지).
+    let eb = 0
+    let cb = 0
+    for (const b of GA_MONTHLY_BACKFILL) {
+      if (Math.floor(b.monthKey / 100) !== y) continue
+      const mm = b.monthKey % 100
+      const realMonth = countInBucket(items, (sd) => sd.getFullYear() === y && sd.getMonth() + 1 === mm).entered
+      if (realMonth > 0) continue
+      eb += b.entered
+      cb += b.confirmed
+    }
+    buckets.push({ key: y, label: `${y}년`, entered: c.entered + eb, confirmed: c.confirmed + cb })
   }
   return buckets
 }
@@ -290,13 +322,18 @@ export function classifyVisits(allItems: AdminSubmission[]): Map<string, VisitTy
   const earliestIdByFingerprint = new Map<string, string>()
   const sorted = [...allItems].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   for (const s of sorted) {
-    if (s.timeUnknown) continue
+    // 익명화된 건은 지문(닉네임+생년월일)이 파기돼 재계산 불가 — 동결된 visitType을 그대로 쓴다.
+    if (s.anonymizedAt || s.timeUnknown) continue
     const fp = visitFingerprint(s)
     if (!earliestIdByFingerprint.has(fp)) earliestIdByFingerprint.set(fp, s.id)
   }
 
   const result = new Map<string, VisitType>()
   for (const s of allItems) {
+    if (s.anonymizedAt) {
+      result.set(s.id, s.visitType ?? 'unknown')
+      continue
+    }
     if (s.timeUnknown) {
       result.set(s.id, 'unknown')
       continue

@@ -37,6 +37,12 @@ export type Submission = {
 
   memo: string
   memoUpdatedAt: string | null
+
+  // §3.12 — 접수 15일 경과 시 개인정보(닉네임·생월일·시분·메모·풀이)만 파기하고 집계 지표는 남긴다.
+  // anonymizedAt: 파기 시각(멱등 처리/감사용). 익명화되면 닉네임·생년월일이 사라져 첫/재방문
+  // 재계산이 불가능하므로 visitType에 파기 직전 판정값을 동결해 둔다.
+  anonymizedAt?: string | null
+  visitType?: 'first' | 'repeat' | 'unknown'
 }
 
 export type SubmissionInput = {

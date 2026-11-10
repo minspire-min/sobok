@@ -132,13 +132,21 @@ export function DetailPage() {
 
         <div className="flex items-start gap-10">
           <div className="w-[393px] shrink-0 overflow-hidden bg-[#1a1a1a] px-4 py-20 text-white">
-            <SajuSummaryCard input={toSajuFormInput(submission)} />
+            {submission.anonymizedAt ? (
+              <p className="text-center text-sm text-white/60">
+                접수 15일 경과로 개인정보(생년월일시 등)가 파기되어 만세력을 표시할 수 없어요.
+                <br />
+                집계 지표만 통계 화면에 남아 있습니다.
+              </p>
+            ) : (
+              <SajuSummaryCard input={toSajuFormInput(submission)} />
+            )}
           </div>
 
           <div className="flex w-[624px] shrink-0 flex-col gap-4">
           <Card className="rounded-[14px] border-0 py-5 shadow-[0_0_0_1px_rgba(10,10,10,0.1)]">
             <CardHeader>
-              <CardTitle className="text-lg">{submission.nickname}</CardTitle>
+              <CardTitle className="text-lg">{submission.anonymizedAt ? '(개인정보 파기됨)' : submission.nickname}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <div className="flex items-center gap-3 text-base text-[#0a0a0a]">
