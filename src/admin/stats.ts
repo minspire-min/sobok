@@ -38,8 +38,9 @@ export type MonthlyRange = { start: number; end: number } // key = y*100+m
 export type YearlyRange = { start: number; end: number } // key = y
 
 export function defaultDailyRange(today: Date): DailyRange {
-  const start = startOfWeek(today)
-  const end = addDays(start, 6)
+  // 현재 날짜 기준 최근 7일(오늘 포함, 오늘-6 ~ 오늘).
+  const end = today
+  const start = addDays(today, -(MAX_DAILY_SPAN_DAYS - 1))
   return { start: toDateInput(start), end: toDateInput(end) }
 }
 
@@ -104,25 +105,24 @@ function applyBackfill(key: number, real: { entered: number; confirmed: number }
   return b ? { entered: b.entered, confirmed: b.confirmed } : real
 }
 
-function countInBucket(items: AdminSubmission[], match: (d: Date) => boolean): { entered: number; confirmed: number } {
+// 진입=메인 화면 진입(page-visit main), 확인=결과 화면 진입(page-visit result)으로 센다.
+// (제출/부적선택 기준이 아니라 화면 진입 기준 — '화면 체류·이탈 퍼널'과 같은 정의를 쓴다.)
+function countInBucket(main: AdminPageVisit[], result: AdminPageVisit[], match: (d: Date) => boolean): { entered: number; confirmed: number } {
   let entered = 0
   let confirmed = 0
-  for (const s of items) {
-    if (!match(new Date(s.createdAt))) continue
-    entered++
-    if (s.selectedTalismanId) confirmed++
-  }
+  for (const v of main) if (match(new Date(v.enteredAt))) entered++
+  for (const v of result) if (match(new Date(v.enteredAt))) confirmed++
   return { entered, confirmed }
 }
 
-export function buildDailyBuckets(items: AdminSubmission[], range: DailyRange): Bucket[] {
+export function buildDailyBuckets(main: AdminPageVisit[], result: AdminPageVisit[], range: DailyRange): Bucket[] {
   const start = new Date(`${range.start}T00:00:00`)
   const end = new Date(`${range.end}T00:00:00`)
   const buckets: Bucket[] = []
   for (let d = start; d <= end; d = addDays(d, 1)) {
     const { y, m, day } = ymd(d)
     const key = y * 10000 + m * 100 + day
-    const { entered, confirmed } = countInBucket(items, (sd) => {
+    const { entered, confirmed } = countInBucket(main, result, (sd) => {
       const sv = ymd(sd)
       return sv.y === y && sv.m === m && sv.day === day
     })
@@ -131,7 +131,7 @@ export function buildDailyBuckets(items: AdminSubmission[], range: DailyRange): 
   return buckets
 }
 
-export function buildWeeklyBuckets(items: AdminSubmission[], range: WeeklyRange): Bucket[] {
+export function buildWeeklyBuckets(main: AdminPageVisit[], result: AdminPageVisit[], range: WeeklyRange): Bucket[] {
   const buckets: Bucket[] = []
   // range.start/end 사이에 존재하는 모든 (월, 주차) 조합을 날짜를 훑어서 찾아낸다.
   const startYear = Math.floor(range.start / 1000)
@@ -150,13 +150,13 @@ export function buildWeeklyBuckets(items: AdminSubmission[], range: WeeklyRange)
   const sortedKeys = Array.from(seen.keys()).sort((a, b) => a - b)
   for (const key of sortedKeys) {
     const { month, week } = seen.get(key)!
-    const { entered, confirmed } = countInBucket(items, (sd) => weekKey(sd.getFullYear(), sd.getMonth() + 1, sd.getDate()) === key)
+    const { entered, confirmed } = countInBucket(main, result, (sd) => weekKey(sd.getFullYear(), sd.getMonth() + 1, sd.getDate()) === key)
     buckets.push({ key, label: `${month}월 ${week}주차`, entered, confirmed })
   }
   return buckets
 }
 
-export function buildMonthlyBuckets(items: AdminSubmission[], range: MonthlyRange): Bucket[] {
+export function buildMonthlyBuckets(main: AdminPageVisit[], result: AdminPageVisit[], range: MonthlyRange): Bucket[] {
   const buckets: Bucket[] = []
   const startY = Math.floor(range.start / 100)
   const startM = range.start % 100
@@ -167,7 +167,7 @@ export function buildMonthlyBuckets(items: AdminSubmission[], range: MonthlyRang
   let m = startM
   while (y < endY || (y === endY && m <= endM)) {
     const key = monthKey(y, m)
-    const c = countInBucket(items, (sd) => sd.getFullYear() === y && sd.getMonth() + 1 === m)
+    const c = countInBucket(main, result, (sd) => sd.getFullYear() === y && sd.getMonth() + 1 === m)
     const { entered, confirmed } = applyBackfill(key, c)
     buckets.push({ key, label: sameYear ? `${m}월` : `${String(y).slice(2)}.${m}월`, entered, confirmed })
     m++
@@ -179,17 +179,17 @@ export function buildMonthlyBuckets(items: AdminSubmission[], range: MonthlyRang
   return buckets
 }
 
-export function buildYearlyBuckets(items: AdminSubmission[], range: YearlyRange): Bucket[] {
+export function buildYearlyBuckets(main: AdminPageVisit[], result: AdminPageVisit[], range: YearlyRange): Bucket[] {
   const buckets: Bucket[] = []
   for (let y = range.start; y <= range.end; y++) {
-    const c = countInBucket(items, (sd) => sd.getFullYear() === y)
+    const c = countInBucket(main, result, (sd) => sd.getFullYear() === y)
     // 그 해의 백필 중 '실제 저장 데이터가 없는 달'만 더한다(실데이터 있는 달은 이미 c에 포함 → 중복 방지).
     let eb = 0
     let cb = 0
     for (const b of GA_MONTHLY_BACKFILL) {
       if (Math.floor(b.monthKey / 100) !== y) continue
       const mm = b.monthKey % 100
-      const realMonth = countInBucket(items, (sd) => sd.getFullYear() === y && sd.getMonth() + 1 === mm).entered
+      const realMonth = countInBucket(main, result, (sd) => sd.getFullYear() === y && sd.getMonth() + 1 === mm).entered
       if (realMonth > 0) continue
       eb += b.entered
       cb += b.confirmed

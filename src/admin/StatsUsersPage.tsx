@@ -221,11 +221,15 @@ export function StatsUsersPage() {
     : granularity === 'monthly' ? monthlyRange
     : yearlyRange
 
+  // 진입=메인 화면 진입, 확인=결과 화면 진입 — 바 차트도 퍼널과 같은 page-visits 기준으로 센다.
+  const mainVisits = visits.filter((v) => v.page === 'main')
+  const resultVisits = visits.filter((v) => v.page === 'result')
+
   const buckets: Bucket[] =
-    granularity === 'daily' ? buildDailyBuckets(items, dailyRange)
-    : granularity === 'weekly' ? buildWeeklyBuckets(items, weeklyRange)
-    : granularity === 'monthly' ? buildMonthlyBuckets(items, monthlyRange)
-    : buildYearlyBuckets(items, yearlyRange)
+    granularity === 'daily' ? buildDailyBuckets(mainVisits, resultVisits, dailyRange)
+    : granularity === 'weekly' ? buildWeeklyBuckets(mainVisits, resultVisits, weeklyRange)
+    : granularity === 'monthly' ? buildMonthlyBuckets(mainVisits, resultVisits, monthlyRange)
+    : buildYearlyBuckets(mainVisits, resultVisits, yearlyRange)
 
   const periodEntered = buckets.reduce((sum, b) => sum + b.entered, 0)
   const periodConfirmed = buckets.reduce((sum, b) => sum + b.confirmed, 0)
@@ -267,8 +271,8 @@ export function StatsUsersPage() {
   // 메인 진입 → (중도이탈 | 결과 페이지 도달) → 결과 화면에서 이탈, 하나로 합친 여정 퍼널.
   // 선택한 기간에 맞춰 같이 움직인다.
   const journey: JourneySummary = summarizeJourney(
-    filterVisitsByRange(visits.filter((v) => v.page === 'main'), granularity, currentRange),
-    filterVisitsByRange(visits.filter((v) => v.page === 'result'), granularity, currentRange),
+    filterVisitsByRange(mainVisits, granularity, currentRange),
+    filterVisitsByRange(resultVisits, granularity, currentRange),
   )
 
   const journeyBars: SimpleBar[] = [
@@ -339,13 +343,10 @@ export function StatsUsersPage() {
               <input
                 type="date"
                 value={dailyRange.start}
-                max={dailyRange.end}
                 onChange={(e) => {
+                  // 시작일을 고르면 그날부터 7일 창으로 종료일을 자동 설정한다.
                   const start = e.target.value
-                  const span = (new Date(dailyRange.end).getTime() - new Date(start).getTime()) / 86400000
-                  const end = span >= MAX_DAILY_SPAN_DAYS
-                    ? new Date(new Date(start).getTime() + (MAX_DAILY_SPAN_DAYS - 1) * 86400000).toISOString().slice(0, 10)
-                    : dailyRange.end
+                  const end = new Date(new Date(start).getTime() + (MAX_DAILY_SPAN_DAYS - 1) * 86400000).toISOString().slice(0, 10)
                   setDailyRange({ start, end })
                 }}
                 className="rounded-[8px] border border-[#e5e5e5] px-3 py-1.5 text-sm"
