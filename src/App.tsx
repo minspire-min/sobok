@@ -1,10 +1,17 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { AppLayout } from './components/AppLayout'
 import { SplashScreen } from './components/SplashScreen'
 import { Toast } from './components/Toast'
+import { HomeScreen } from './screens/HomeScreen'
+import { LoginScreen } from './screens/LoginScreen'
 import { MainInputScreen } from './screens/MainInputScreen'
+import { MyPageScreen } from './screens/MyPageScreen'
+import { MySajuScreen } from './screens/MySajuScreen'
 import { ResultScreen } from './screens/ResultScreen'
+import { SajuNewScreen } from './screens/SajuNewScreen'
 import { SavedInfoScreen } from './screens/SavedInfoScreen'
+import { RequireAuth } from './lib/auth'
 import { waitForAppFonts } from './lib/fontLoading'
 import { clearLastInput, clearSubmissionId, clearTalismanSelection, loadLastInput, saveLastInput } from './lib/storage'
 import type { SajuFormInput } from './lib/types'
@@ -73,7 +80,38 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<EntryRoute />} />
+      {/* 소福소福 회원 서비스 (단계 1) — 헤더·GNB·푸터 공통 레이아웃 */}
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<HomeScreen />} />
+        <Route
+          path="/saju"
+          element={
+            <RequireAuth>
+              <MySajuScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/saju/new"
+          element={
+            <RequireAuth>
+              <SajuNewScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/my"
+          element={
+            <RequireAuth>
+              <MyPageScreen />
+            </RequireAuth>
+          }
+        />
+      </Route>
+      <Route path="/login" element={<LoginScreen />} />
+
+      {/* 10/21 부스 이벤트 버전 — /event로 이전해 보존 (어드민·통계가 이 흐름을 본다) */}
+      <Route path="/event" element={<EntryRoute />} />
       <Route path="/result" element={<ResultRoute />} />
       <Route
         path="/admin-mingminjimin/*"

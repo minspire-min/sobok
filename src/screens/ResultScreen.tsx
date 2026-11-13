@@ -149,7 +149,7 @@ export function ResultScreen({ input }: Props) {
         </div>
 
         <Link
-          to="/"
+          to="/event"
           state={{ forceNew: true }}
           onClick={handleBackToInput}
           className="relative flex h-[40px] w-[200px] items-center justify-center md:h-[48px] md:w-[240px]"

@@ -34,13 +34,16 @@ function makeDefaultInput(): SajuFormInput {
 }
 
 type Props = {
-  onSubmit: (input: SajuFormInput) => void
+  onSubmit: (input: SajuFormInput) => void | Promise<void>
+  // register: 회원 사주 등록용(PRD §6.4) — 고민 선택 없음, 이벤트 통계·서버 제출 없음
+  variant?: 'event' | 'register'
 }
 
 // Figma `73:914`(Main_1/2) · `95:2136`(Main_2/2) — 입력이 너무 많아 2스텝으로 나눴다.
 // 1스텝: 닉네임 → 성별 → 생년월일 → 양음력/윤달 → 시각 → 시간모름 → [다음]
-// 2스텝: [이전] → 고민 카테고리 → 동의 → [사주 확인하기]
-export function MainInputScreen({ onSubmit }: Props) {
+// 2스텝: [이전] → 고민 카테고리(event만) → 동의 → [사주 확인하기/사주 등록하기]
+export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
+  const isRegister = variant === 'register'
   const [step, setStep] = useState<1 | 2>(1)
   const [input, setInput] = useState<SajuFormInput>(makeDefaultInput)
   const [dateText, setDateText] = useState('')
@@ -48,7 +51,7 @@ export function MainInputScreen({ onSubmit }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [showConsent, setShowConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const { markCompleted } = usePageVisitTracking('main')
+  const { markCompleted } = usePageVisitTracking(isRegister ? null : 'main')
 
   const parsedDate = parseDateText(dateText)
   const realismErrors = validateForm(input)
@@ -57,7 +60,7 @@ export function MainInputScreen({ onSubmit }: Props) {
   const dateOk = Boolean(parsedDate) && !realismErrors.date
   const timeOk = input.timeUnknown || timePicked
   const step1Valid = !realismErrors.nickname && input.gender !== null && dateOk && timeOk
-  const step2Valid = input.category !== null && input.consent
+  const step2Valid = (isRegister || input.category !== null) && input.consent
 
   function update<K extends keyof SajuFormInput>(key: K, value: SajuFormInput[K]) {
     setInput((prev) => {
@@ -90,6 +93,15 @@ export function MainInputScreen({ onSubmit }: Props) {
   async function handleSubmit() {
     if (!step1Valid || !step2Valid || submitting) return
     setSubmitting(true)
+    if (isRegister) {
+      // 회원 사주 등록 — 저장은 부모(SajuNewScreen)가 Supabase로 처리. 실패 시 폼은 유지.
+      try {
+        await onSubmit(input)
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
     clearSubmissionId()
     const [created] = await Promise.all([createSubmission(input), new Promise((resolve) => setTimeout(resolve, 1000))])
     if (created) {
@@ -104,7 +116,7 @@ export function MainInputScreen({ onSubmit }: Props) {
       <div className="flex w-full max-w-[361px] flex-col items-center gap-12">
         <div className="flex flex-col items-center gap-4">
           <img src={heart} alt="" className="h-16 w-[69px] object-cover" />
-          <h1 className="text-[40px] font-bold tracking-[1.6px] text-white">사주 만세력</h1>
+          <h1 className="text-[40px] font-bold tracking-[1.6px] text-white">{isRegister ? '사주 등록' : '사주 만세력'}</h1>
         </div>
 
         {step === 1 && (
@@ -232,32 +244,39 @@ export function MainInputScreen({ onSubmit }: Props) {
                 <span className="font-['Pretendard'] text-[16px] text-white/80">이전</span>
               </button>
 
-              <div className="flex w-full flex-col items-center gap-4">
-                <div className="flex items-center gap-1">
-                  <img src={heart} alt="" className="h-6 w-[26px] object-cover" />
-                  <p className="font-['Pretendard'] text-[16px] text-white">요즘 고민 중인 카테고리를 선택해 주세요.</p>
+              {/* 고민 선택은 회원 서비스에서는 결제 직전 단계로 이동(PRD §6.4) — event 변형에만 표시 */}
+              {!isRegister && (
+                <div className="flex w-full flex-col items-center gap-4">
+                  <div className="flex items-center gap-1">
+                    <img src={heart} alt="" className="h-6 w-[26px] object-cover" />
+                    <p className="font-['Pretendard'] text-[16px] text-white">요즘 고민 중인 카테고리를 선택해 주세요.</p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-x-3 gap-y-[14px]">
+                    {CATEGORIES.map((c) => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() => update('category', c.key)}
+                        className={`relative rounded-[4px] px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[14px] tracking-[1.12px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
+                          input.category === c.key ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
+                        }`}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap justify-center gap-x-3 gap-y-[14px]">
-                  {CATEGORIES.map((c) => (
-                    <button
-                      key={c.key}
-                      type="button"
-                      onClick={() => update('category', c.key)}
-                      className={`relative rounded-[4px] px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[14px] tracking-[1.12px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
-                        input.category === c.key ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
-                      }`}
-                    >
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
 
             <div className="flex w-full items-center">
               <PixelCheckbox
                 id="consent"
-                label="개인정보 수집 및 이용에 동의합니다."
+                label={
+                  isRegister
+                    ? '사주 정보 저장에 동의하며, 타인의 사주는 본인 동의를 받았어요.'
+                    : '개인정보 수집 및 이용에 동의합니다.'
+                }
                 className="font-['Pretendard']"
                 checked={input.consent}
                 onChange={(e) => update('consent', e.target.checked)}
@@ -281,7 +300,7 @@ export function MainInputScreen({ onSubmit }: Props) {
           </PixelButton>
         ) : (
           <PixelButton onClick={handleSubmit} disabled={!step2Valid || submitting}>
-            사주 확인하기
+            {isRegister ? '사주 등록하기' : '사주 확인하기'}
           </PixelButton>
         )}
       </div>
@@ -291,15 +310,27 @@ export function MainInputScreen({ onSubmit }: Props) {
       {showConsent && (
         <DetailModal title="개인정보 수집 및 이용" onClose={() => setShowConsent(false)}>
           <div className="flex flex-col gap-4 text-[14px] text-[#101010]">
-            <div className="flex flex-col gap-1">
-              <p className="font-['Pretendard'] font-bold">[개인정보 수집 및 이용에 대한 동의]</p>
-              <p className="font-['Pretendard']">- 수집 및 이용 주체: 윤민지(민지민)</p>
-              <p className="font-['Pretendard']">- 개인정보 수집·이용 목적: 사주 만세력 확인 및 사주/부적 분석 활용</p>
-              <p className="font-['Pretendard']">- 수집하는 개인정보 항목: 이름/닉네임, 성별, 생년월일시, 고민 카테고리</p>
-              <p className="font-['Pretendard']">- 개인정보 보유 및 이용 기간: 15일 내 전체 폐기</p>
-            </div>
+            {isRegister ? (
+              <div className="flex flex-col gap-1">
+                <p className="font-['Pretendard'] font-bold">[사주 정보 저장에 대한 동의]</p>
+                <p className="font-['Pretendard']">- 수집 및 이용 주체: 소福소福 (대표 윤민지)</p>
+                <p className="font-['Pretendard']">- 수집·이용 목적: 사주 풀이 제공 및 부적 추천</p>
+                <p className="font-['Pretendard']">- 수집 항목: 이름/닉네임, 성별, 생년월일시</p>
+                <p className="font-['Pretendard']">- 보유 및 이용 기간: 회원 탈퇴 후 7일 이내 삭제</p>
+                <p className="font-['Pretendard']">- 가족·지인 등 타인의 사주를 등록하는 경우, 그 당사자의 동의를 받은 뒤 등록해 주세요.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                <p className="font-['Pretendard'] font-bold">[개인정보 수집 및 이용에 대한 동의]</p>
+                <p className="font-['Pretendard']">- 수집 및 이용 주체: 윤민지(민지민)</p>
+                <p className="font-['Pretendard']">- 개인정보 수집·이용 목적: 사주 만세력 확인 및 사주/부적 분석 활용</p>
+                <p className="font-['Pretendard']">- 수집하는 개인정보 항목: 이름/닉네임, 성별, 생년월일시, 고민 카테고리</p>
+                <p className="font-['Pretendard']">- 개인정보 보유 및 이용 기간: 15일 내 전체 폐기</p>
+              </div>
+            )}
             <p className="font-['Pretendard']">
-              귀하는 개인정보 수집·이용에 동의하지 않을 권리가 있습니다. 동의를 거부하실 경우 사주 확인 및 이벤트 참여가 제한됩니다.
+              귀하는 개인정보 수집·이용에 동의하지 않을 권리가 있습니다. 동의를 거부하실 경우 사주 확인
+              {isRegister ? ' 및 사주 등록' : ' 및 이벤트 참여'}이 제한됩니다.
             </p>
           </div>
         </DetailModal>
