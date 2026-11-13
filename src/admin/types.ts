@@ -37,6 +37,7 @@ export type AdminSubmission = {
   // 비워져 있고, 첫/재방문은 파기 직전 동결된 visitType으로 읽는다(stats.classifyVisits 참고).
   anonymizedAt?: string | null
   visitType?: 'first' | 'repeat' | 'unknown'
+  isTest?: boolean // 운영 테스트(?test=1)로 만든 레코드 — 통계 집계에서 제외
 }
 
 export type AdminPageVisit = {
@@ -47,4 +48,5 @@ export type AdminPageVisit = {
   completed: boolean
   completedAt: string | null
   submissionId: string | null
+  isTest?: boolean // 운영 테스트(?test=1)로 만든 방문 — 통계 집계에서 제외
 }

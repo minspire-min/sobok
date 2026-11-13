@@ -200,8 +200,9 @@ export function StatsUsersPage() {
   useEffect(() => {
     Promise.all([listSubmissions(), listPageVisits()])
       .then(([s, v]) => {
-        setItems(s)
-        setVisits(v)
+        // 운영 테스트(?test=1)로 만든 레코드는 모든 통계 집계에서 제외한다(관리자 목록엔 그대로 보임).
+        setItems(s.filter((x) => !x.isTest))
+        setVisits(v.filter((x) => !x.isTest))
       })
       .catch((e) => {
         if (e instanceof AdminAuthError) {

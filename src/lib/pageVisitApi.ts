@@ -1,3 +1,5 @@
+import { isTestMode } from './testMode'
+
 // R12 체류시간 추적 — 실패해도 참여자 경험은 전혀 막지 않는다(best-effort, 전부 조용히 무시).
 
 // id를 미리 만들어 매 시도마다 같은 값으로 보낸다 — submissionApi.ts의 createSubmission과
@@ -9,7 +11,7 @@ export async function createPageVisit(page: 'main' | 'result'): Promise<string |
       const res = await fetch('/api/page-visits', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ page, id }),
+        body: JSON.stringify({ page, id, isTest: isTestMode() }),
       })
       if (res.ok) return id
     } catch {

@@ -97,6 +97,7 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
   const result = validateInput(body)
   if (!result.ok) return json({ error: result.error }, 400)
   const { id, input } = result
+  const isTest = (body as { isTest?: unknown }).isTest === true
 
   const store = getStore('submissions')
   // 응답을 못 받아 클라이언트가 같은 id로 재시도한 경우 — 새로 계산/저장하지 않고 그대로
@@ -142,6 +143,7 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
     readingFailedAt: null,
     memo: '',
     memoUpdatedAt: null,
+    isTest,
   }
 
   await store.setJSON(submission.id, submission)

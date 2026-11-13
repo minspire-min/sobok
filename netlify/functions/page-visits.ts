@@ -23,7 +23,7 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
   } catch {
     return json({ error: 'invalid json' }, 400)
   }
-  const { page, id } = body as { page?: unknown; id?: unknown }
+  const { page, id, isTest } = body as { page?: unknown; id?: unknown; isTest?: unknown }
   if (page !== 'main' && page !== 'result') return json({ error: 'invalid page' }, 400)
   if (typeof id !== 'string' || !UUID_RE.test(id)) return json({ error: 'invalid id' }, 400)
 
@@ -41,6 +41,7 @@ async function handleCreate(req: Request, context: Context): Promise<Response> {
     completed: false,
     completedAt: null,
     submissionId: null,
+    isTest: isTest === true,
   }
   await store.setJSON(visit.id, visit)
   return json({ id: visit.id }, 201)

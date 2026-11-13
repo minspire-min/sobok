@@ -1,3 +1,4 @@
+import { isTestMode } from './testMode'
 import type { SajuFormInput } from './types'
 
 // R12 — 참여자 화면을 서버(netlify/functions/submissions.ts)에 연결한다. 행사 당일 네트워크
@@ -16,7 +17,7 @@ export async function createSubmission(input: SajuFormInput): Promise<CreateSubm
       const res = await fetch('/api/submissions', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...input, id }),
+        body: JSON.stringify({ ...input, id, isTest: isTestMode() }),
       })
       if (res.ok) return (await res.json()) as CreateSubmissionResponse
     } catch {

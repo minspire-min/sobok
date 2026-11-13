@@ -43,6 +43,9 @@ export type Submission = {
   // 재계산이 불가능하므로 visitType에 파기 직전 판정값을 동결해 둔다.
   anonymizedAt?: string | null
   visitType?: 'first' | 'repeat' | 'unknown'
+
+  // 운영 사이트에서 직접 테스트하며 만든 레코드 표시(?test=1). 관리자 통계 집계에서 제외된다.
+  isTest?: boolean
 }
 
 export type SubmissionInput = {
@@ -70,4 +73,7 @@ export type PageVisit = {
   completed: boolean // main: 제출 완료 / result: 부적 선택 완료
   completedAt: string | null
   submissionId: string | null
+
+  // 운영 사이트에서 직접 테스트하며 만든 방문 표시(?test=1). 관리자 통계 집계에서 제외된다.
+  isTest?: boolean
 }
