@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import backArrow from '../assets/icon-back-arrow.svg'
-import heart from '../assets/heart.png'
+const backArrow = '/assets/icon-back-arrow.svg'
+const heart = '/assets/heart.png'
 import { Bezel } from '../components/Bezel'
 import { DetailModal } from '../components/DetailModal'
 import { Loading } from '../components/Loading'

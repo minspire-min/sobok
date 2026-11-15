@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+'use client'
+import { useRouter } from 'next/navigation'
 import { PixelCheckbox } from '../components/PixelCheckbox'
 import { useAuth } from '../lib/auth'
 
@@ -8,14 +9,14 @@ const PROVIDER_LABEL: Record<string, string> = { kakao: '카카오', google: '�
 
 export function MyPageScreen() {
   const { session, marketingConsent, updateMarketingConsent, signOut } = useAuth()
-  const navigate = useNavigate()
+  const router = useRouter()
 
   const provider = (session?.user.app_metadata?.provider as string | undefined) ?? ''
   const email = session?.user.email ?? '-'
 
   async function handleSignOut() {
     await signOut()
-    navigate('/', { replace: true })
+    router.replace('/')
   }
 
   return (

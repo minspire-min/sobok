@@ -1,6 +1,8 @@
+'use client'
+
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import heart from '../assets/heart.png'
+import { useRouter, useSearchParams } from 'next/navigation'
+const heart = '/assets/heart.png'
 import { DetailModal } from '../components/DetailModal'
 import { PixelButton } from '../components/PixelButton'
 import { PixelCheckbox } from '../components/PixelCheckbox'
@@ -10,9 +12,10 @@ import { useAuth } from '../lib/auth'
 // OAuth 왕복 후에도 이 화면으로 돌아와(redirectTo=/login) 동의 여부에 따라 분기한다.
 export function LoginScreen() {
   const { loading, session, consented, signInWithProvider, completeConsent } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const next = (location.state as { next?: string } | null)?.next ?? sessionStorage.getItem('auth:next') ?? '/saju'
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const storedNext = typeof window === 'undefined' ? null : sessionStorage.getItem('auth:next')
+  const next = searchParams.get('next') ?? storedNext ?? '/saju'
 
   const [terms, setTerms] = useState(false)
   const [privacy, setPrivacy] = useState(false)
@@ -23,9 +26,9 @@ export function LoginScreen() {
   useEffect(() => {
     if (!loading && session && consented) {
       sessionStorage.removeItem('auth:next')
-      navigate(next, { replace: true })
+      router.replace(next)
     }
-  }, [loading, session, consented, navigate, next])
+  }, [loading, session, consented, router, next])
 
   if (loading) return <div className="min-h-dvh bg-[#1a1a1a]" />
 
@@ -35,7 +38,7 @@ export function LoginScreen() {
     try {
       await completeConsent(marketing)
       sessionStorage.removeItem('auth:next')
-      navigate(next, { replace: true })
+      router.replace(next)
     } finally {
       setSubmitting(false)
     }

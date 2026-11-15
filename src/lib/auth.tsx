@@ -1,5 +1,7 @@
+'use client'
+
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { usePathname, useRouter } from 'next/navigation'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 
@@ -105,10 +107,14 @@ export function useAuth(): AuthState {
 // PRD §5 분기 규칙 — 비로그인(또는 동의 전)이면 로그인으로 보내고, 끝나면 원래 목적지로 복귀.
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { loading, session, consented } = useAuth()
-  const location = useLocation()
-  if (loading) return null
-  if (!session || !consented) {
-    return <Navigate to="/login" state={{ next: location.pathname }} replace />
-  }
+  const router = useRouter()
+  const pathname = usePathname()
+  const needsLogin = !loading && (!session || !consented)
+
+  useEffect(() => {
+    if (needsLogin) router.replace(`/login?next=${encodeURIComponent(pathname)}`)
+  }, [needsLogin, router, pathname])
+
+  if (loading || needsLogin) return null
   return <>{children}</>
 }

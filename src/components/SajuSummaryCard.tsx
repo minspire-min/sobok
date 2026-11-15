@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { PillarKey } from 'ssaju'
-import infoIcon from '../assets/icon-info.svg'
+const infoIcon = '/assets/icon-info.svg'
 import { STEM_CHARACTER } from '../lib/characters'
 import { computeFiveElementCounts } from '../lib/elementScore'
 import { BRANCH_ANIMAL, ELEMENT_COLOR, ELEMENT_COLOR_WORD, ELEMENT_ORDER, ELEMENT_OUTLINE_COLOR } from '../lib/elements'

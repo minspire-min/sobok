@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import heart from '../assets/heart.png'
+import Link from 'next/link'
+const heart = '/assets/heart.png'
 import { PixelButton } from '../components/PixelButton'
 
 // PRD §6.2 메인 1차 — 소개 · 이용 방법 · 무료 안내 · 상품 3종 · 고민 진열 · FAQ · CTA.
@@ -40,7 +40,7 @@ export function HomeScreen() {
           <br />
           그리고 나를 응원하는 부적 한 장.
         </p>
-        <Link to="/saju" className="w-full">
+        <Link href="/saju" className="w-full">
           <PixelButton>내 사주 보러 가기</PixelButton>
         </Link>
       </section>
@@ -105,7 +105,7 @@ export function HomeScreen() {
           {TOP_CONCERNS.map((c) => (
             <Link
               key={c}
-              to="/saju"
+              href="/saju"
               className="rounded-[4px] bg-white px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[14px] tracking-[1.12px] text-[#101010] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)]"
             >
               {c}
@@ -129,7 +129,7 @@ export function HomeScreen() {
 
       {/* 하단 CTA */}
       <section className="w-full max-w-[361px]">
-        <Link to="/saju" className="block w-full">
+        <Link href="/saju" className="block w-full">
           <PixelButton>내 사주 보러 가기</PixelButton>
         </Link>
       </section>

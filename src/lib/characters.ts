@@ -1,13 +1,13 @@
-import gapTree from '../assets/characters/gap-tree.png'
-import eulSprout from '../assets/characters/eul-sprout.png'
-import byeongSun from '../assets/characters/byeong-sun.png'
-import jeongCandle from '../assets/characters/jeong-candle.png'
-import muMountain from '../assets/characters/mu-mountain.png'
-import giField from '../assets/characters/gi-field.png'
-import gyeongSword from '../assets/characters/gyeong-sword.png'
-import sinCrystal from '../assets/characters/sin-crystal.png'
-import imWave from '../assets/characters/im-wave.png'
-import gyeRaincloud from '../assets/characters/gye-raincloud.png'
+const gapTree = '/assets/characters/gap-tree.png'
+const eulSprout = '/assets/characters/eul-sprout.png'
+const byeongSun = '/assets/characters/byeong-sun.png'
+const jeongCandle = '/assets/characters/jeong-candle.png'
+const muMountain = '/assets/characters/mu-mountain.png'
+const giField = '/assets/characters/gi-field.png'
+const gyeongSword = '/assets/characters/gyeong-sword.png'
+const sinCrystal = '/assets/characters/sin-crystal.png'
+const imWave = '/assets/characters/im-wave.png'
+const gyeRaincloud = '/assets/characters/gye-raincloud.png'
 
 // Figma 48:1206 "십성별 컬러" — 천간 10개 에셋 전부 확보
 export const STEM_CHARACTER: Record<string, string> = {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import heart from '../assets/heart.png'
+const heart = '/assets/heart.png'
 import { PixelButton } from '../components/PixelButton'
 
 type Props = {

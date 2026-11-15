@@ -27,3 +27,5 @@ scripts/.*.png
 
 # Local Netlify folder
 .netlify
+.next
+next-env.d.ts

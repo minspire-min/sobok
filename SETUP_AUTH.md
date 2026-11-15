@@ -44,12 +44,12 @@
 1. Supabase 대시보드 → Authentication → **URL Configuration**
 2. Site URL: 운영 주소 입력 (지금은 Netlify 주소, 예: `https://xxxx.netlify.app`)
 3. Redirect URLs에 아래 두 줄 추가:
-   - `http://localhost:5173/login` (개발용)
+   - `http://localhost:3000/login` (개발용)
    - `https://xxxx.netlify.app/login` (운영 주소로 바꿔서)
 
 ## 4. 확인 방법
 
-1. 터미널에서 `npm run dev` 실행 → 브라우저에서 `http://localhost:5173/login` 접속
+1. 터미널에서 `npm run dev` 실행 → 브라우저에서 `http://localhost:3000/login` 접속
 2. [카카오로 시작하기]를 누르면 카카오 로그인 창이 뜨고, 로그인하면 동의 화면 → 내 사주로 이어지면 성공
 3. 안 되면 에러 화면에 나온 문구를 그대로 Claude에게 보여 주세요
 

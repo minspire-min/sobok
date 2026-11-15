@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react'
-import buttonPrimary from '../assets/button-primary.svg'
-import buttonSecondary from '../assets/button-secondary.svg'
+const buttonPrimary = '/assets/button-primary.svg'
+const buttonSecondary = '/assets/button-secondary.svg'
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'primary' | 'secondary'

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import closeIcon from '../assets/icon-close.png'
+const closeIcon = '/assets/icon-close.png'
 import { useBodyScrollLock } from '../lib/useBodyScrollLock'
 
 type Props = {

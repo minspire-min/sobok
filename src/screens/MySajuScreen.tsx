@@ -1,6 +1,8 @@
+'use client'
+
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import heart from '../assets/heart.png'
+import { useRouter } from 'next/navigation'
+const heart = '/assets/heart.png'
 import { Loading } from '../components/Loading'
 import { PixelButton } from '../components/PixelButton'
 import { SajuSummaryCard } from '../components/SajuSummaryCard'
@@ -14,9 +16,12 @@ import { computeSaju } from '../lib/sajuPipeline'
 const LAST_PROFILE_KEY = 'saju:lastProfileId'
 
 export function MySajuScreen() {
-  const navigate = useNavigate()
+  const router = useRouter()
   const [profiles, setProfiles] = useState<SajuProfileRow[] | null>(null)
-  const [activeId, setActiveId] = useState<string | null>(() => localStorage.getItem(LAST_PROFILE_KEY))
+  // SSR 중에는 localStorage가 없으므로 가드 — 클라이언트 첫 렌더에서 읽는다.
+  const [activeId, setActiveId] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : localStorage.getItem(LAST_PROFILE_KEY),
+  )
   const [toast, setToast] = useState<string | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
 
@@ -45,7 +50,7 @@ export function MySajuScreen() {
       setToast('최대 8명까지 등록할 수 있어요.')
       return
     }
-    navigate('/saju/new')
+    router.push('/saju/new')
   }
 
   if (loadFailed) {
@@ -65,7 +70,7 @@ export function MySajuScreen() {
         <img src={heart} alt="" className="h-16 w-[69px] object-cover" />
         <p className="font-['Pretendard'] text-[16px] text-white">사주 정보를 등록해 주세요 :-)</p>
         <div className="w-full max-w-[361px]">
-          <PixelButton onClick={() => navigate('/saju/new')}>사주 정보 등록하기</PixelButton>
+          <PixelButton onClick={() => router.push('/saju/new')}>사주 정보 등록하기</PixelButton>
         </div>
       </div>
     )

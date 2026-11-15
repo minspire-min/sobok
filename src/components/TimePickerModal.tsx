@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import closeIcon from '../assets/icon-close.png'
+const closeIcon = '/assets/icon-close.png'
 import { to12Hour, to24Hour } from '../lib/time'
 import { clampIndex, indexToScrollTop, scrollTopToIndex, wheelPadding } from '../lib/timeWheel'
 import { useBodyScrollLock } from '../lib/useBodyScrollLock'
@@ -66,9 +66,9 @@ export function TimePickerModal({ hour, minute, onConfirm, onCancel }: Props) {
             className="pointer-events-none absolute inset-x-0 h-[40px] rounded-[4px] bg-[#f5f5f5]"
             style={{ top: BAND_TOP }}
           />
-          <WheelColumn label="" values={AMPM} selected={draftAmPm} onSettle={setDraftAmPm} formatLabel={(v) => AMPM_LABEL[v]} width={64} />
-          <WheelColumn label="시" values={HOURS} selected={draftHour} onSettle={setDraftHour} formatLabel={(v) => String(v).padStart(2, '0')} />
-          <WheelColumn label="분" values={MINUTES} selected={draftMinute} onSettle={setDraftMinute} formatLabel={(v) => String(v).padStart(2, '0')} />
+          <WheelColumn<'AM' | 'PM'> label="" values={AMPM} selected={draftAmPm} onSettle={setDraftAmPm} formatLabel={(v) => AMPM_LABEL[v]} width={64} />
+          <WheelColumn<number> label="시" values={HOURS} selected={draftHour} onSettle={setDraftHour} formatLabel={(v) => String(v).padStart(2, '0')} />
+          <WheelColumn<number> label="분" values={MINUTES} selected={draftMinute} onSettle={setDraftMinute} formatLabel={(v) => String(v).padStart(2, '0')} />
         </div>
       </div>
     </div>
