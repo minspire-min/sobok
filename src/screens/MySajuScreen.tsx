@@ -171,6 +171,14 @@ export function MySajuScreen() {
                       입금 안내 보기
                     </Link>
                   )}
+                  {o.payment_status === 'paid' && (
+                    <Link
+                      href={`/saju/${active.id}/order?order=${o.id}`}
+                      className="font-['Pretendard'] text-[13px] text-[#f31bc0] underline underline-offset-2"
+                    >
+                      부적 보러 가기
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}

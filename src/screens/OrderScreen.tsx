@@ -18,12 +18,16 @@ import {
   PAYMENT_STATUS_LABEL,
   type OrderRow,
 } from '../lib/ordersApi'
-import { listSajuProfiles, type SajuProfileRow } from '../lib/profilesApi'
+import { listSajuProfiles, profileToFormInput, type SajuProfileRow } from '../lib/profilesApi'
 import { BANK_ACCOUNT, bankAccountReady, formatWon, PRODUCTS, type ProductNo } from '../lib/products'
+import { computeSaju } from '../lib/sajuPipeline'
+import { determineElementForConcern } from '../lib/elementScore2'
+import type { Element } from '../lib/elementScore'
+import { issueTalismanPicks, selectTalisman, type TalismanPicks } from '../lib/talismansApi'
 
 // PRD §6.5 고민 선택 → 상품 선택 → 주문 확인 → 입금 안내(§11.5).
 // 금액·재구매 판정은 서버(create_order)가 다시 하므로 여기 계산은 표시용이다.
-type Step = 'concern' | 'product' | 'confirm' | 'deposit'
+type Step = 'concern' | 'product' | 'confirm' | 'deposit' | 'talisman'
 
 type Props = { profileId: string }
 
@@ -46,6 +50,9 @@ export function OrderScreen({ profileId }: Props) {
   const [activeOrder, setActiveOrder] = useState<OrderRow | null>(null)
   const [bankSheetOpen, setBankSheetOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [picks, setPicks] = useState<TalismanPicks | null>(null)
+  const [pickedId, setPickedId] = useState<string | null>(null)
+  const [confirmPick, setConfirmPick] = useState(false)
 
   const wantedOrderId = searchParams.get('order')
 
@@ -56,12 +63,13 @@ export function OrderScreen({ profileId }: Props) {
         setProfile(p)
         setOrders(orderRows)
         if (!p) setLoadFailed(true)
-        // ?order= 로 들어오면 해당 주문의 입금 안내로 바로 이동
+        // ?order= 로 들어오면 — 입금 대기면 입금 안내, 결제 완료면 부적 추천으로
         if (wantedOrderId) {
           const o = orderRows.find((x) => x.id === wantedOrderId)
           if (o) {
             setActiveOrder(o)
-            setStep('deposit')
+            if (o.payment_status === 'paid') void goTalisman(o)
+            else setStep('deposit')
           }
         }
       })
@@ -137,6 +145,42 @@ export function OrderScreen({ profileId }: Props) {
     }
   }
 
+  // 결제 완료 주문 → 오행 결정(§8.2 v2) → 추천 발급(주문당 1회, 서버 저장) → 추천 화면
+  async function goTalisman(order: OrderRow) {
+    try {
+      const input = profileToFormInput(order.saju_snapshot)
+      const computation = computeSaju(input)
+      const dayElement = computation.result.pillarDetails.day.element.stem as Element
+      const { element, basis } = determineElementForConcern(
+        order.sub_concern,
+        computation.result,
+        computation.timeUnknown,
+        dayElement,
+        input.gender!,
+      )
+      const issued = await issueTalismanPicks(order.id, element, basis)
+      setPicks(issued)
+      setPickedId(issued.chosen_id)
+      setActiveOrder(order)
+      setStep('talisman')
+    } catch {
+      setToast('부적 추천을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+    }
+  }
+
+  async function handleSelectTalisman() {
+    if (!activeOrder || !pickedId) return
+    try {
+      const updated = await selectTalisman(activeOrder.id, pickedId)
+      setPicks(updated)
+      setConfirmPick(false)
+      setToast('부적 선택이 완료됐어요.')
+    } catch {
+      setConfirmPick(false)
+      setToast('선택에 실패했어요. 잠시 후 다시 시도해 주세요.')
+    }
+  }
+
   async function handleReportDeposit() {
     if (!activeOrder || activeOrder.deposit_reported_at) return
     try {
@@ -164,7 +208,7 @@ export function OrderScreen({ profileId }: Props) {
   return (
     <div className="flex flex-col items-center gap-8 px-4 py-10">
       <div className="flex w-full max-w-[361px] flex-col gap-8">
-        {step !== 'deposit' && (
+        {step !== 'deposit' && step !== 'talisman' && (
           <p className="text-center font-['Mona12'] text-[20px] font-bold tracking-[1.28px]">
             {step === 'concern' ? `${profile.nickname}님의 고민` : step === 'product' ? '상품 선택' : '주문 확인'}
           </p>
@@ -341,13 +385,83 @@ export function OrderScreen({ profileId }: Props) {
 
         {/* 4) 입금 안내 — §11.5 입금 대기 화면 */}
         {step === 'deposit' && activeOrder && (
-          <DepositPanel
-            order={activeOrder}
-            nickname={profile.nickname}
-            onCopy={copy}
-            onOpenBankSheet={() => setBankSheetOpen(true)}
-            onReportDeposit={() => void handleReportDeposit()}
-          />
+          <>
+            <DepositPanel
+              order={activeOrder}
+              nickname={profile.nickname}
+              onCopy={copy}
+              onOpenBankSheet={() => setBankSheetOpen(true)}
+              onReportDeposit={() => void handleReportDeposit()}
+            />
+            {activeOrder.payment_status === 'paid' && (
+              <PixelButton onClick={() => void goTalisman(activeOrder)}>부적 추천 보기</PixelButton>
+            )}
+          </>
+        )}
+
+        {/* 5) 부적 추천·선택 — 3종 중 1종, 확인 팝업 후 잠금 (§6.5, 2-10) */}
+        {step === 'talisman' && activeOrder && picks && (
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col items-center gap-2">
+              <p className="font-['Mona12'] text-[20px] font-bold tracking-[1.28px]">부적 추천</p>
+              <p className="font-['Pretendard'] text-[13px] text-white/70">
+                {subConcernLabel(activeOrder.sub_concern)} · 보충 오행 {picks.element}
+              </p>
+            </div>
+
+            <div className="flex w-full flex-col items-start gap-3">
+              {picks.recommended.map((t) => {
+                const locked = Boolean(picks.chosen_id)
+                const isChosen = picks.chosen_id === t.id
+                const selected = locked ? isChosen : pickedId === t.id
+                if (locked && !isChosen) return null
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    disabled={locked}
+                    onClick={() => setPickedId(t.id)}
+                    className={`relative flex w-full flex-col items-center gap-4 rounded-[4px] bg-white/5 px-4 py-5 text-center ${
+                      selected ? 'border-2 border-[#f31bc0]' : 'border border-white/50'
+                    }`}
+                  >
+                    {t.personal && (
+                      <span className="absolute top-3 left-3 rounded-full border-2 border-[#f31bc0] px-2 py-[2px] font-['Mona12'] text-[11px] text-[#f31bc0]">
+                        퍼스널 추천
+                      </span>
+                    )}
+                    <div
+                      className="flex items-center justify-center gap-3 pt-2 font-['Mona12'] text-[18px] font-bold text-white"
+                      style={{ textShadow: '0px 2px 0px black' }}
+                    >
+                      <p>{t.korean}</p>
+                      <p>|</p>
+                      <p>{t.hanja}</p>
+                    </div>
+                    <div className="flex w-full flex-col items-center gap-2">
+                      <p className="font-['Pretendard'] text-[16px] font-bold text-white" style={{ textShadow: '0px 2px 0px black' }}>
+                        {t.meaning}
+                      </p>
+                      <p className="font-['Pretendard'] text-[14px] text-white/80">{t.description}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {picks.chosen_id ? (
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-center font-['Pretendard'] text-[14px] text-white/85">부적 선택이 완료됐어요.</p>
+                <p className="text-center text-[12px] text-[#888]">
+                  <span>※</span> <span className="font-['Pretendard']">이미지 저장은 부적 디자인이 준비되는 대로 열려요.</span>
+                </p>
+              </div>
+            ) : (
+              <PixelButton onClick={() => setConfirmPick(true)} disabled={!pickedId}>
+                선택 완료
+              </PixelButton>
+            )}
+          </div>
         )}
       </div>
 
@@ -377,6 +491,31 @@ export function OrderScreen({ profileId }: Props) {
                 className="h-[44px] flex-1 rounded-[4px] bg-[#f31bc0] font-['Pretendard'] text-[14px] text-white"
               >
                 다시 선택
+              </button>
+            </div>
+          </div>
+        </DetailModal>
+      )}
+
+      {/* 부적 선택 확인 팝업 — "선택 후에는 변경할 수 없어요" (§4 잠금 규칙) */}
+      {confirmPick && (
+        <DetailModal title="이 부적으로 할까요?" onClose={() => setConfirmPick(false)}>
+          <div className="flex flex-col gap-4">
+            <p className="font-['Pretendard'] text-[14px] leading-relaxed text-[#101010]">선택 후에는 변경할 수 없어요.</p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmPick(false)}
+                className="h-[44px] flex-1 rounded-[4px] border border-[#101010] font-['Pretendard'] text-[14px] text-[#101010]"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSelectTalisman()}
+                className="h-[44px] flex-1 rounded-[4px] bg-[#f31bc0] font-['Pretendard'] text-[14px] text-white"
+              >
+                선택 완료
               </button>
             </div>
           </div>
@@ -508,7 +647,7 @@ function DepositPanel({
       )}
       {order.payment_status === 'paid' && (
         <p className="text-center font-['Pretendard'] text-[14px] leading-relaxed text-white/85">
-          결제가 확인됐어요. 분석과 부적 추천은 준비 중이에요 — 열리면 이 화면에서 바로 볼 수 있어요.
+          결제가 확인됐어요. 아래에서 부적 추천을 받아 보세요. 분석 5페이지는 준비 중이에요.
         </p>
       )}
     </div>

@@ -74,9 +74,9 @@ const OVERCOMES: Record<Element, Element> = { 목: '토', 토: '수', 수: '화'
 const GENERATED_BY: Record<Element, Element> = { 화: '목', 토: '화', 금: '토', 수: '금', 목: '수' }
 const OVERCOME_BY: Record<Element, Element> = { 토: '목', 수: '토', 화: '수', 금: '화', 목: '금' }
 
-type Relation = '비겁' | '식상' | '재성' | '관성' | '인성'
+export type Relation = '비겁' | '식상' | '재성' | '관성' | '인성'
 
-function relatedElement(dayElement: Element, relation: Relation): Element {
+export function relatedElement(dayElement: Element, relation: Relation): Element {
   if (relation === '비겁') return dayElement
   if (relation === '식상') return GENERATES[dayElement]
   if (relation === '재성') return OVERCOMES[dayElement]

@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import type { SajuProfileRow } from './profilesApi'
 
 // 주문 행 — 금액·상태는 전부 서버(DB 함수)가 정한다. 클라이언트는 조회·요청만.
 export type OrderRow = {
@@ -16,6 +17,7 @@ export type OrderRow = {
   deposit_due_at: string
   deposit_reported_at: string | null
   paid_at: string | null
+  saju_snapshot: SajuProfileRow // 주문 시점의 사주 입력값 — 부적 추천 계산 기준
   created_at: string
 }
 

@@ -29,3 +29,4 @@ scripts/.*.png
 .netlify
 .next
 next-env.d.ts
+scripts/.out
