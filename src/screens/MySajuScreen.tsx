@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 const heart = '/assets/heart.png'
 import { Loading } from '../components/Loading'
@@ -8,7 +9,15 @@ import { PixelButton } from '../components/PixelButton'
 import { SajuSummaryCard } from '../components/SajuSummaryCard'
 import { Toast } from '../components/Toast'
 import { ILGAN_READINGS } from '../lib/ilganReadings'
+import {
+  formatDate,
+  listOrdersForProfile,
+  PAYMENT_STATUS_COLOR,
+  PAYMENT_STATUS_LABEL,
+  type OrderRow,
+} from '../lib/ordersApi'
 import { listSajuProfiles, profileToFormInput, MAX_PROFILES, type SajuProfileRow } from '../lib/profilesApi'
+import { subConcernLabel } from '../lib/concerns'
 import { computeSaju } from '../lib/sajuPipeline'
 
 // PRD §6.5 — 내 사주(무료 구간): 사주 탭(최대 8) + 일간 5줄 해석 + 만세력.
@@ -24,6 +33,7 @@ export function MySajuScreen() {
   )
   const [toast, setToast] = useState<string | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [orders, setOrders] = useState<OrderRow[]>([])
 
   useEffect(() => {
     listSajuProfiles()
@@ -35,6 +45,20 @@ export function MySajuScreen() {
     if (!profiles || profiles.length === 0) return null
     return profiles.find((p) => p.id === activeId) ?? profiles[0]
   }, [profiles, activeId])
+
+  // 선택된 사주의 주문(구매한 고민 카드) — PRD §6.7
+  useEffect(() => {
+    if (!active) return
+    let cancelled = false
+    listOrdersForProfile(active.id)
+      .then((rows) => {
+        if (!cancelled) setOrders(rows)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [active])
 
   const input = useMemo(() => (active ? profileToFormInput(active) : null), [active])
   const computation = useMemo(() => (input ? computeSaju(input) : null), [input])
@@ -123,14 +147,45 @@ export function MySajuScreen() {
         </div>
       )}
 
-      {/* 유료 구간 진입점 — 단계 2에서 활성화 */}
-      <button
-        type="button"
-        disabled
-        className="rounded-full border border-white/30 px-5 py-3 font-['Mona12'] text-[14px] text-white/60 opacity-60"
-      >
-        내 고민에 맞는 부적 보기 (준비 중)
-      </button>
+      {/* 구매한 고민 카드 목록 (PRD §6.7) */}
+      {active && orders.filter((o) => o.payment_status !== 'canceled').length > 0 && (
+        <div className="flex w-full max-w-[345px] flex-col gap-3 md:max-w-[480px]">
+          <h2 className="text-center font-['Mona12'] text-[16px] font-bold md:text-[20px]">나의 고민</h2>
+          {orders
+            .filter((o) => o.payment_status !== 'canceled')
+            .map((o) => (
+              <div key={o.id} className="flex flex-col gap-2 rounded-[4px] border border-white/50 bg-white/5 px-4 py-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-['Pretendard'] text-[14px] font-bold">{subConcernLabel(o.sub_concern)}</span>
+                  <span className={`rounded-full border-2 px-2 py-[2px] font-['Mona12'] text-[11px] ${PAYMENT_STATUS_COLOR[o.payment_status]}`}>
+                    {PAYMENT_STATUS_LABEL[o.payment_status]}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-['Pretendard'] text-[12px] text-[#888]">{formatDate(o.created_at)}</span>
+                  {o.payment_status === 'awaiting_deposit' && (
+                    <Link
+                      href={`/saju/${active.id}/order?order=${o.id}`}
+                      className="font-['Pretendard'] text-[13px] text-[#f31bc0] underline underline-offset-2"
+                    >
+                      입금 안내 보기
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {/* 유료 구간 진입 — 고민 선택 → 결제 (단계 2) */}
+      {active && (
+        <Link
+          href={`/saju/${active.id}/order`}
+          className="rounded-full border border-white/30 px-5 py-3 font-['Mona12'] text-[14px] text-white active:translate-y-[2px]"
+        >
+          내 고민에 맞는 부적 보기
+        </Link>
+      )}
 
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
     </div>
