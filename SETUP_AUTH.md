@@ -42,10 +42,10 @@
 로그인이 끝난 뒤 사용자를 어디로 돌려보낼지 Supabase에 알려줘야 합니다.
 
 1. Supabase 대시보드 → Authentication → **URL Configuration**
-2. Site URL: 운영 주소 입력 (지금은 Netlify 주소, 예: `https://xxxx.netlify.app`)
+2. Site URL: `https://soboksobok-saju.vercel.app` 입력
 3. Redirect URLs에 아래 두 줄 추가:
    - `http://localhost:3000/login` (개발용)
-   - `https://xxxx.netlify.app/login` (운영 주소로 바꿔서)
+   - `https://soboksobok-saju.vercel.app/login` (운영)
 
 ## 4. 확인 방법
 
