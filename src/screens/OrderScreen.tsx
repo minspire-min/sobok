@@ -24,10 +24,13 @@ import { computeSaju } from '../lib/sajuPipeline'
 import { determineElementForConcern } from '../lib/elementScore2'
 import type { Element } from '../lib/elementScore'
 import { issueTalismanPicks, selectTalisman, type TalismanPicks } from '../lib/talismansApi'
+import { buildMockReading } from '../lib/mockReading'
+import { markReadingViewed, saveReading, type ReadingRow } from '../lib/readingsApi'
+import { downloadTalismanImage } from '../lib/talismanImage'
 
 // PRD §6.5 고민 선택 → 상품 선택 → 주문 확인 → 입금 안내(§11.5).
 // 금액·재구매 판정은 서버(create_order)가 다시 하므로 여기 계산은 표시용이다.
-type Step = 'concern' | 'product' | 'confirm' | 'deposit' | 'talisman'
+type Step = 'concern' | 'product' | 'confirm' | 'deposit' | 'reading' | 'talisman'
 
 type Props = { profileId: string }
 
@@ -53,6 +56,8 @@ export function OrderScreen({ profileId }: Props) {
   const [picks, setPicks] = useState<TalismanPicks | null>(null)
   const [pickedId, setPickedId] = useState<string | null>(null)
   const [confirmPick, setConfirmPick] = useState(false)
+  const [reading, setReading] = useState<ReadingRow | null>(null)
+  const [readingPage, setReadingPage] = useState(0)
 
   const wantedOrderId = searchParams.get('order')
 
@@ -63,12 +68,12 @@ export function OrderScreen({ profileId }: Props) {
         setProfile(p)
         setOrders(orderRows)
         if (!p) setLoadFailed(true)
-        // ?order= 로 들어오면 — 입금 대기면 입금 안내, 결제 완료면 부적 추천으로
+        // ?order= 로 들어오면 — 입금 대기면 입금 안내, 결제 완료면 분석(→부적)으로
         if (wantedOrderId) {
           const o = orderRows.find((x) => x.id === wantedOrderId)
           if (o) {
             setActiveOrder(o)
-            if (o.payment_status === 'paid') void goTalisman(o)
+            if (o.payment_status === 'paid') void goReading(o)
             else setStep('deposit')
           }
         }
@@ -145,19 +150,48 @@ export function OrderScreen({ profileId }: Props) {
     }
   }
 
-  // 결제 완료 주문 → 오행 결정(§8.2 v2) → 추천 발급(주문당 1회, 서버 저장) → 추천 화면
+  // 주문 스냅샷 기준 사주 계산 + 보충 오행 결정(§8.2 v2) — 분석과 부적이 같은 결론을 쓴다(§8.6)
+  function computeRecommendation(order: OrderRow) {
+    const input = profileToFormInput(order.saju_snapshot)
+    const computation = computeSaju(input)
+    const dayElement = computation.result.pillarDetails.day.element.stem as Element
+    const { element, basis } = determineElementForConcern(
+      order.sub_concern,
+      computation.result,
+      computation.timeUnknown,
+      dayElement,
+      input.gender!,
+    )
+    return { input, computation, element, basis }
+  }
+
+  // 결제 완료 주문 → 분석 5페이지 (1회 생성 저장, 열람 기록 — 이후 환불 불가 결정 #4)
+  async function goReading(order: OrderRow) {
+    try {
+      const { input, computation, element, basis } = computeRecommendation(order)
+      const pages = buildMockReading({
+        nickname: input.nickname,
+        result: computation.result,
+        timeUnknown: computation.timeUnknown,
+        subKey: order.sub_concern,
+        element,
+        basis,
+      })
+      const saved = await saveReading(order.id, pages)
+      await markReadingViewed(order.id)
+      setReading(saved)
+      setReadingPage(0)
+      setActiveOrder(order)
+      setStep('reading')
+    } catch {
+      setToast('분석을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+    }
+  }
+
+  // 부적 추천 발급(주문당 1회, 서버 저장) → 추천 화면
   async function goTalisman(order: OrderRow) {
     try {
-      const input = profileToFormInput(order.saju_snapshot)
-      const computation = computeSaju(input)
-      const dayElement = computation.result.pillarDetails.day.element.stem as Element
-      const { element, basis } = determineElementForConcern(
-        order.sub_concern,
-        computation.result,
-        computation.timeUnknown,
-        dayElement,
-        input.gender!,
-      )
+      const { element, basis } = computeRecommendation(order)
       const issued = await issueTalismanPicks(order.id, element, basis)
       setPicks(issued)
       setPickedId(issued.chosen_id)
@@ -208,7 +242,7 @@ export function OrderScreen({ profileId }: Props) {
   return (
     <div className="flex flex-col items-center gap-8 px-4 py-10">
       <div className="flex w-full max-w-[361px] flex-col gap-8">
-        {step !== 'deposit' && step !== 'talisman' && (
+        {step !== 'deposit' && step !== 'talisman' && step !== 'reading' && (
           <p className="text-center font-['Mona12'] text-[20px] font-bold tracking-[1.28px]">
             {step === 'concern' ? `${profile.nickname}님의 고민` : step === 'product' ? '상품 선택' : '주문 확인'}
           </p>
@@ -394,9 +428,50 @@ export function OrderScreen({ profileId }: Props) {
               onReportDeposit={() => void handleReportDeposit()}
             />
             {activeOrder.payment_status === 'paid' && (
-              <PixelButton onClick={() => void goTalisman(activeOrder)}>부적 추천 보기</PixelButton>
+              <PixelButton onClick={() => void goReading(activeOrder)}>고민별 사주 보기</PixelButton>
             )}
           </>
+        )}
+
+        {/* 5) 분석 5페이지 — 가로 스와이프 + 페이지 점, 마지막에 [부적 추천 보기] (§6.5, 2-9) */}
+        {step === 'reading' && activeOrder && reading && (
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col items-center gap-2">
+              <p className="font-['Mona12'] text-[20px] font-bold tracking-[1.28px]">고민별 사주 분석</p>
+              <span className="rounded-full border-2 border-[#f3b526] px-3 py-[2px] font-['Mona12'] text-[11px] text-[#f3b526]">
+                임시 분석 · 정식 분석 준비 중
+              </span>
+            </div>
+
+            <div
+              className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2"
+              onScroll={(e) => {
+                const el = e.currentTarget
+                setReadingPage(Math.round(el.scrollLeft / (el.clientWidth * 0.92)))
+              }}
+            >
+              {reading.pages.map((page, i) => (
+                <div
+                  key={page.title}
+                  className="flex w-[92%] shrink-0 snap-center flex-col gap-4 rounded-[4px] border border-white/50 bg-white/5 px-5 py-6"
+                >
+                  <p className="text-center font-['Mona12'] text-[15px] font-bold tracking-[1.12px] text-[#f31bc0]">
+                    {i + 1}. {page.title}
+                  </p>
+                  <p className="font-['Pretendard'] text-[15px] leading-relaxed break-keep text-white/90">{page.body}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* 페이지 점 — 픽셀 점 5개, 현재 위치 마젠타 (§9.5) */}
+            <div className="flex items-center justify-center gap-2">
+              {reading.pages.map((_, i) => (
+                <span key={i} className={`size-2 ${i === readingPage ? 'bg-[#f31bc0]' : 'bg-white/30'}`} />
+              ))}
+            </div>
+
+            <PixelButton onClick={() => void goTalisman(activeOrder)}>부적 추천 보기</PixelButton>
+          </div>
         )}
 
         {/* 5) 부적 추천·선택 — 3종 중 1종, 확인 팝업 후 잠금 (§6.5, 2-10) */}
@@ -450,10 +525,35 @@ export function OrderScreen({ profileId }: Props) {
             </div>
 
             {picks.chosen_id ? (
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-3">
                 <p className="text-center font-['Pretendard'] text-[14px] text-white/85">부적 선택이 완료됐어요.</p>
+                {/* 이미지 저장 — 임시 디자인(시트 #4), 픽셀 템플릿이 나오면 교체 (2-11·2-12) */}
+                <div className="flex w-full gap-2">
+                  {(() => {
+                    const chosen = picks.recommended.find((t) => t.id === picks.chosen_id)
+                    if (!chosen) return null
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => downloadTalismanImage(chosen, 'wallpaper')}
+                          className="h-[44px] flex-1 rounded-[4px] border border-white/50 font-['Pretendard'] text-[13px] text-white active:translate-y-[2px]"
+                        >
+                          배경화면용 저장 (9:16)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadTalismanImage(chosen, 'square')}
+                          className="h-[44px] flex-1 rounded-[4px] border border-white/50 font-['Pretendard'] text-[13px] text-white active:translate-y-[2px]"
+                        >
+                          정사각 저장 (1:1)
+                        </button>
+                      </>
+                    )
+                  })()}
+                </div>
                 <p className="text-center text-[12px] text-[#888]">
-                  <span>※</span> <span className="font-['Pretendard']">이미지 저장은 부적 디자인이 준비되는 대로 열려요.</span>
+                  <span>※</span> <span className="font-['Pretendard']">지금 이미지는 임시 디자인이에요. 정식 픽셀 디자인이 준비되면 다시 받을 수 있어요.</span>
                 </p>
               </div>
             ) : (
@@ -461,6 +561,14 @@ export function OrderScreen({ profileId }: Props) {
                 선택 완료
               </PixelButton>
             )}
+
+            <button
+              type="button"
+              onClick={() => activeOrder && void goReading(activeOrder)}
+              className="font-['Pretendard'] text-[13px] text-[#888] underline underline-offset-2"
+            >
+              분석 다시 보기
+            </button>
           </div>
         )}
       </div>

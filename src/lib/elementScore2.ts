@@ -1,6 +1,6 @@
 import type { SajuResult } from 'ssaju'
-import { computeElementScores, relatedElement, type Element, type Relation } from './elementScore'
-import { ELEMENT_ORDER } from './elements'
+import { computeElementScores, relatedElement, type Element, type Relation } from './elementScore.ts'
+import { ELEMENT_ORDER } from './elements.ts'
 
 // PRD §8.2 v2 — 하위 고민(40) → 십성(표 A 초안) → 보충 오행(표 B: 상생상극 규칙).
 // ⚠️ 표 A는 자료가 없어 초안으로 작성 — 지민 검수 대상(TALISMAN_TABLE_V2.md 안내 참고).
