@@ -6,14 +6,20 @@ import {
   adminCancelOrder,
   adminCompleteRefund,
   adminConfirmDeposit,
+  adminGetOrderExtras,
   adminListOrders,
   adminRejectRefund,
   adminReviewRefund,
+  adminSetMemo,
   adminSignIn,
   checkIsAdmin,
 } from '../lib/adminApi'
 import { adminAnswerInquiry, adminListInquiries, INQUIRY_STATUS_LABEL, type InquiryRow } from '../lib/inquiriesApi'
 import { subConcernLabel } from '../lib/concerns'
+import { computeFiveElementCounts } from '../lib/elementScore'
+import { ELEMENT_ORDER } from '../lib/elements'
+import { profileToFormInput } from '../lib/profilesApi'
+import { computeSaju } from '../lib/sajuPipeline'
 import { formatDate, PAYMENT_STATUS_LABEL, type OrderRow } from '../lib/ordersApi'
 import { formatWon, PRODUCTS } from '../lib/products'
 
@@ -29,6 +35,10 @@ export function AdminScreen() {
   const [inquiries, setInquiries] = useState<InquiryRow[]>([])
   const [answeringId, setAnsweringId] = useState<string | null>(null)
   const [answerText, setAnswerText] = useState('')
+  // 주문 상세 (§10.2 사주 확인 상세)
+  const [detailOrder, setDetailOrder] = useState<OrderRow | null>(null)
+  const [extras, setExtras] = useState<Awaited<ReturnType<typeof adminGetOrderExtras>> | null>(null)
+  const [memoText, setMemoText] = useState('')
   const [tab, setTab] = useState<Tab>('awaiting')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -121,6 +131,26 @@ export function AdminScreen() {
       total: list.length,
     }
   }, [orders, inquiries])
+
+  function openDetail(o: OrderRow) {
+    setDetailOrder(o)
+    setMemoText(o.admin_memo ?? '')
+    setExtras(null)
+    adminGetOrderExtras(o.id)
+      .then(setExtras)
+      .catch(() => setExtras({ reading: null, picks: null }))
+  }
+
+  async function handleSaveMemo() {
+    if (!detailOrder) return
+    try {
+      const updated = await adminSetMemo(detailOrder.id, memoText)
+      setOrders((prev) => (prev ?? []).map((x) => (x.id === updated.id ? updated : x)))
+      setDetailOrder(updated)
+    } catch {
+      window.alert('메모 저장에 실패했어요.')
+    }
+  }
 
   async function handleAnswer(q: InquiryRow) {
     if (!answerText.trim()) return
@@ -344,7 +374,11 @@ export function AdminScreen() {
               {visible.map((o) => (
                 <tr key={o.id} className="border-b border-[#f5f5f5]">
                   <td className="px-4 py-3 whitespace-nowrap">{formatDate(o.created_at)}</td>
-                  <td className="px-4 py-3 font-bold">{o.order_code}</td>
+                  <td className="px-4 py-3">
+                    <button type="button" onClick={() => openDetail(o)} className="font-bold underline underline-offset-2">
+                      {o.order_code}
+                    </button>
+                  </td>
                   <td className="px-4 py-3">{o.saju_snapshot?.nickname ?? '-'}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{PRODUCTS[o.product].name}{o.kind === 'repurchase' ? ' (재구매)' : ''}</td>
                   <td className="max-w-[220px] px-4 py-3">
@@ -423,6 +457,124 @@ export function AdminScreen() {
         </div>
         )}
       </main>
+
+      {/* 주문 상세 모달 — 사주·고민·분석·부적·메모 (§10.2) */}
+      {detailOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDetailOrder(null)}>
+          <div
+            className="max-h-[85vh] w-full max-w-[560px] overflow-y-auto rounded-lg bg-white p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const snap = detailOrder.saju_snapshot
+              const input = profileToFormInput(snap)
+              const computation = computeSaju(input)
+              const counts = computeFiveElementCounts(computation.result, computation.timeUnknown)
+              const pillars = (['year', 'month', 'day', 'hour'] as const).map((p) => ({
+                key: p,
+                label: { year: '년', month: '월', day: '일', hour: '시' }[p],
+                detail: computation.result.pillarDetails[p],
+              }))
+              return (
+                <div className="flex flex-col gap-4 text-[13px]">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-[16px] font-bold">
+                      주문 {detailOrder.order_code} · {snap?.nickname}
+                    </h2>
+                    <button type="button" onClick={() => setDetailOrder(null)} className="text-[13px] text-[#888] underline">
+                      닫기
+                    </button>
+                  </div>
+
+                  {/* 사주 정보 */}
+                  <div className="rounded-md bg-[#f5f5f5] p-3">
+                    <p className="mb-2 font-bold">사주 정보</p>
+                    <p>
+                      {snap?.gender} · {snap?.calendar_type === 'lunar' ? '음력' : '양력'} {snap?.birth_year}.
+                      {String(snap?.birth_month).padStart(2, '0')}.{String(snap?.birth_day).padStart(2, '0')}
+                      {snap?.time_unknown
+                        ? ' · 시간 모름'
+                        : ` ${String(snap?.birth_hour).padStart(2, '0')}:${String(snap?.birth_minute).padStart(2, '0')}`}
+                    </p>
+                    <div className="mt-2 grid grid-cols-4 gap-1 text-center">
+                      {pillars.map((p) => (
+                        <div key={p.key} className="rounded bg-white py-1">
+                          <p className="text-[11px] text-[#888]">{p.label}주</p>
+                          <p className="text-[15px] font-bold">
+                            {p.key === 'hour' && computation.timeUnknown ? '—' : `${p.detail.stem}${p.detail.branch}`}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[12px] text-[#555]">
+                      오행: {ELEMENT_ORDER.map((el) => `${el} ${counts[el]}`).join(' · ')}
+                    </p>
+                  </div>
+
+                  {/* 고민 — 프런트와 동일한 저장본 (§10.2) */}
+                  <div className="rounded-md bg-[#f5f5f5] p-3">
+                    <p className="mb-1 font-bold">고민</p>
+                    <p>
+                      {subConcernLabel(detailOrder.sub_concern)}
+                      {detailOrder.kind === 'repurchase' && ' (재구매)'}
+                    </p>
+                    {detailOrder.concern_text && <p className="mt-1 text-[#555]">“{detailOrder.concern_text}”</p>}
+                  </div>
+
+                  {/* 부적 추천·선택 */}
+                  <div className="rounded-md bg-[#f5f5f5] p-3">
+                    <p className="mb-1 font-bold">부적 {extras?.picks ? `(보충 오행 ${extras.picks.element})` : ''}</p>
+                    {!extras && <p className="text-[#888]">불러오는 중…</p>}
+                    {extras && !extras.picks && <p className="text-[#888]">아직 추천이 발급되지 않았어요.</p>}
+                    {extras?.picks?.recommended.map((t) => (
+                      <p key={t.id} className={extras.picks?.chosen_id === t.id ? 'font-bold text-[#f31bc0]' : ''}>
+                        {t.hanja} ({t.korean}) — {t.meaning}
+                        {t.personal && ' · 퍼스널'}
+                        {extras.picks?.chosen_id === t.id && ' ✓ 선택'}
+                      </p>
+                    ))}
+                  </div>
+
+                  {/* 분석 저장본 */}
+                  <div className="rounded-md bg-[#f5f5f5] p-3">
+                    <p className="mb-1 font-bold">
+                      분석 {extras?.reading ? `(${extras.reading.generator === 'mock' ? '임시 생성' : extras.reading.generator})` : ''}
+                    </p>
+                    {!extras && <p className="text-[#888]">불러오는 중…</p>}
+                    {extras && !extras.reading && <p className="text-[#888]">아직 분석이 생성되지 않았어요.</p>}
+                    {extras?.reading?.pages.map((pg, i) => (
+                      <details key={pg.title} className="mb-1">
+                        <summary className="cursor-pointer">
+                          {i + 1}. {pg.title}
+                        </summary>
+                        <p className="mt-1 leading-relaxed text-[#555]">{pg.body}</p>
+                      </details>
+                    ))}
+                  </div>
+
+                  {/* 메모 */}
+                  <div className="flex flex-col gap-2">
+                    <p className="font-bold">메모</p>
+                    <textarea
+                      value={memoText}
+                      onChange={(e) => setMemoText(e.target.value)}
+                      placeholder="운영 메모 (예: 입금자명 불일치 확인함)"
+                      className="h-[72px] resize-none rounded-md border border-[#ddd] px-3 py-2 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveMemo()}
+                      className="self-start rounded-md bg-[#101010] px-4 py-2 text-[12px] text-white"
+                    >
+                      메모 저장
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

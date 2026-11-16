@@ -53,3 +53,29 @@ export async function adminRejectRefund(orderId: string, memo: string): Promise<
   if (error) throw error
   return data as OrderRow
 }
+
+// 주문 상세 부가 정보 — 분석 저장본·부적 추천/선택 (관리자 RLS로 조회, §10.2 사주 확인 상세)
+export async function adminGetOrderExtras(orderId: string): Promise<{
+  reading: { pages: Array<{ title: string; body: string }>; generator: string } | null
+  picks: {
+    element: string
+    reason: string | null
+    recommended: Array<{ id: string; hanja: string; korean: string; meaning: string; personal: boolean }>
+    chosen_id: string | null
+  } | null
+}> {
+  const [readingRes, picksRes] = await Promise.all([
+    supabase.from('readings').select('pages, generator').eq('order_id', orderId).maybeSingle(),
+    supabase.from('talisman_picks').select('element, reason, recommended, chosen_id').eq('order_id', orderId).maybeSingle(),
+  ])
+  return {
+    reading: (readingRes.data as never) ?? null,
+    picks: (picksRes.data as never) ?? null,
+  }
+}
+
+export async function adminSetMemo(orderId: string, memo: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_set_memo', { p_order_id: orderId, p_memo: memo })
+  if (error) throw error
+  return data as OrderRow
+}

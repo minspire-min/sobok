@@ -21,6 +21,7 @@ export type OrderRow = {
   refund_reason: string | null
   refund_account: { bank: string; account: string; holder: string } | null
   refunded_at: string | null
+  admin_memo: string | null
   created_at: string
 }
 

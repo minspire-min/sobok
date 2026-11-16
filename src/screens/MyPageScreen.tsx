@@ -83,7 +83,7 @@ export function MyPageScreen() {
       setInquiryOpen(false)
       setIBody('')
       setIOrderId('')
-      setToast('문의가 접수됐어요. 영업일 기준 1~2일 안에 답변드려요.')
+      setToast('문의가 접수됐어요. 영업일 기준 5~7일 안에 답변드려요.')
     } catch {
       setToast('문의 접수에 실패했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
@@ -376,7 +376,7 @@ export function MyPageScreen() {
                 <textarea
                   value={iBody}
                   onChange={(e) => setIBody(e.target.value.slice(0, 1000))}
-                  placeholder="문의 내용을 적어 주세요. (영업일 기준 1~2일 안에 답변드려요)"
+                  placeholder="문의 내용을 적어 주세요. (영업일 기준 5~7일 안에 답변드려요)"
                   className="h-[120px] resize-none rounded-[4px] border border-[#ddd] px-3 py-2 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
                 />
                 <button
