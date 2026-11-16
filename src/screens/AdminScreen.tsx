@@ -12,12 +12,13 @@ import {
   adminSignIn,
   checkIsAdmin,
 } from '../lib/adminApi'
+import { adminAnswerInquiry, adminListInquiries, INQUIRY_STATUS_LABEL, type InquiryRow } from '../lib/inquiriesApi'
 import { subConcernLabel } from '../lib/concerns'
 import { formatDate, PAYMENT_STATUS_LABEL, type OrderRow } from '../lib/ordersApi'
 import { formatWon, PRODUCTS } from '../lib/products'
 
 // PRD §10.2 결제 관리 — 1차: 입금 확인 요청 처리. 라이트 테마(어드민은 픽셀 스타일 제외, §9.5)
-type Tab = 'awaiting' | 'refund' | 'all'
+type Tab = 'awaiting' | 'refund' | 'inquiry' | 'all'
 
 export function AdminScreen() {
   const { loading, session, signOut } = useAuth()
@@ -25,6 +26,9 @@ export function AdminScreen() {
   const [adminCheck, setAdminCheck] = useState<{ uid: string; ok: boolean } | null>(null)
   const isAdmin = session && adminCheck?.uid === session.user.id ? adminCheck.ok : null
   const [orders, setOrders] = useState<OrderRow[] | null>(null)
+  const [inquiries, setInquiries] = useState<InquiryRow[]>([])
+  const [answeringId, setAnsweringId] = useState<string | null>(null)
+  const [answerText, setAnswerText] = useState('')
   const [tab, setTab] = useState<Tab>('awaiting')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -35,6 +39,9 @@ export function AdminScreen() {
     adminListOrders()
       .then(setOrders)
       .catch(() => setOrders([]))
+    adminListInquiries()
+      .then(setInquiries)
+      .catch(() => setInquiries([]))
   }, [])
 
   useEffect(() => {
@@ -110,9 +117,22 @@ export function AdminScreen() {
       awaiting: list.filter((o) => o.payment_status === 'awaiting_deposit').length,
       refunds: list.filter((o) => o.payment_status === 'refund_requested' || o.payment_status === 'refund_reviewing').length,
       paidToday: list.filter((o) => o.paid_at && new Date(o.paid_at).toDateString() === today).length,
+      unanswered: inquiries.filter((q) => q.status === 'received').length,
       total: list.length,
     }
-  }, [orders])
+  }, [orders, inquiries])
+
+  async function handleAnswer(q: InquiryRow) {
+    if (!answerText.trim()) return
+    try {
+      const updated = await adminAnswerInquiry(q.id, answerText)
+      setInquiries((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
+      setAnsweringId(null)
+      setAnswerText('')
+    } catch {
+      window.alert('답변 저장에 실패했어요. 새로고침 후 다시 시도해 주세요.')
+    }
+  }
 
   const visible = useMemo(() => {
     const list = orders ?? []
@@ -186,11 +206,12 @@ export function AdminScreen() {
 
       <main className="mx-auto flex w-full max-w-[1000px] flex-col gap-5 p-5">
         {/* 대시보드 카드 — 오늘 할 일 + 미처리 누적 (PRD §10.2) */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           {[
             ['입금 확인 요청', stats.reported, '#f31bc0'],
             ['입금 대기 전체', stats.awaiting, '#101010'],
             ['환불 처리 중', stats.refunds, '#f3b526'],
+            ['미답변 문의', stats.unanswered, '#d61f34'],
             ['오늘 결제 완료', stats.paidToday, '#17c666'],
           ].map(([label, value, color]) => (
             <div key={label as string} className="rounded-lg border border-[#e5e5e5] bg-white p-4">
@@ -207,6 +228,7 @@ export function AdminScreen() {
             [
               ['awaiting', '입금 대기'],
               ['refund', '환불'],
+              ['inquiry', '문의'],
               ['all', '전체 주문'],
             ] as Array<[Tab, string]>
           ).map(([key, label]) => (
@@ -221,6 +243,79 @@ export function AdminScreen() {
           ))}
         </div>
 
+        {/* 문의 탭 — 미답변 우선, 인라인 답변 작성 (§10.2 문의 메뉴) */}
+        {tab === 'inquiry' && (
+          <div className="flex flex-col gap-3">
+            {inquiries.length === 0 && (
+              <div className="rounded-lg border border-[#e5e5e5] bg-white p-6 text-center text-[13px] text-[#888]">접수된 문의가 없어요.</div>
+            )}
+            {[...inquiries]
+              .sort((a, b) => Number(a.status === 'answered') - Number(b.status === 'answered'))
+              .map((q) => (
+                <div key={q.id} className="flex flex-col gap-2 rounded-lg border border-[#e5e5e5] bg-white p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] text-[#888]">
+                      [{q.type}] {formatDate(q.created_at)}
+                      {q.order_id && <span className="ml-2 text-[12px]">· 관련 주문 있음</span>}
+                    </span>
+                    <span className={`rounded-full px-2 py-[2px] text-[11px] text-white ${q.status === 'answered' ? 'bg-[#17c666]' : 'bg-[#d61f34]'}`}>
+                      {INQUIRY_STATUS_LABEL[q.status]}
+                    </span>
+                  </div>
+                  <p className="text-[14px] leading-relaxed break-keep">{q.body}</p>
+                  {q.answer && (
+                    <div className="rounded-md bg-[#f5f5f5] px-3 py-2">
+                      <p className="text-[12px] text-[#888]">답변 ({q.answered_at ? formatDate(q.answered_at) : ''})</p>
+                      <p className="text-[13px] leading-relaxed break-keep">{q.answer}</p>
+                    </div>
+                  )}
+                  {q.status === 'received' &&
+                    (answeringId === q.id ? (
+                      <div className="flex flex-col gap-2">
+                        <textarea
+                          value={answerText}
+                          onChange={(e) => setAnswerText(e.target.value)}
+                          placeholder="답변을 입력하세요"
+                          className="h-[96px] resize-none rounded-md border border-[#ddd] px-3 py-2 text-[13px] focus:outline-none"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void handleAnswer(q)}
+                            className="rounded-md bg-[#101010] px-4 py-2 text-[12px] text-white"
+                          >
+                            답변 저장
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAnsweringId(null)
+                              setAnswerText('')
+                            }}
+                            className="rounded-md border border-[#ddd] px-4 py-2 text-[12px]"
+                          >
+                            취소
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAnsweringId(q.id)
+                          setAnswerText('')
+                        }}
+                        className="self-start rounded-md border border-[#ddd] px-4 py-2 text-[12px]"
+                      >
+                        답변 작성
+                      </button>
+                    ))}
+                </div>
+              ))}
+          </div>
+        )}
+
+        {tab !== 'inquiry' && (
         <div className="overflow-x-auto rounded-lg border border-[#e5e5e5] bg-white">
           <table className="w-full min-w-[820px] text-left text-[13px]">
             <thead className="border-b border-[#eee] text-[#888]">
@@ -326,6 +421,7 @@ export function AdminScreen() {
             </tbody>
           </table>
         </div>
+        )}
       </main>
     </div>
   )
