@@ -12,11 +12,15 @@ import { TOP_CONCERNS, findConcern, subConcernLabel } from '../lib/concerns'
 import {
   createOrder,
   formatDate,
+  getShipment,
   listOrdersForProfile,
   reportDeposit,
+  upsertShippingAddress,
   PAYMENT_STATUS_COLOR,
   PAYMENT_STATUS_LABEL,
+  SHIPPING_STATUS_LABEL,
   type OrderRow,
+  type ShipmentRow,
 } from '../lib/ordersApi'
 import { listSajuProfiles, profileToFormInput, type SajuProfileRow } from '../lib/profilesApi'
 import { BANK_ACCOUNT, bankAccountReady, formatWon, PRODUCTS, type ProductNo } from '../lib/products'
@@ -58,8 +62,11 @@ export function OrderScreen({ profileId }: Props) {
   const [confirmPick, setConfirmPick] = useState(false)
   const [reading, setReading] = useState<ReadingRow | null>(null)
   const [readingPage, setReadingPage] = useState(0)
+  const [shipment, setShipment] = useState<ShipmentRow | null>(null)
+  const [shipmentLoaded, setShipmentLoaded] = useState(false)
 
   const wantedOrderId = searchParams.get('order')
+  const wantedShip = Boolean(searchParams.get('ship'))
 
   useEffect(() => {
     Promise.all([listSajuProfiles(), listOrdersForProfile(profileId)])
@@ -68,18 +75,19 @@ export function OrderScreen({ profileId }: Props) {
         setProfile(p)
         setOrders(orderRows)
         if (!p) setLoadFailed(true)
-        // ?order= 로 들어오면 — 입금 대기면 입금 안내, 결제 완료면 분석(→부적)으로
+        // ?order= 로 들어오면 — 입금 대기면 입금 안내, 결제 완료면 분석으로 (?ship=1이면 배송 화면)
         if (wantedOrderId) {
           const o = orderRows.find((x) => x.id === wantedOrderId)
           if (o) {
             setActiveOrder(o)
-            if (o.payment_status === 'paid') void goReading(o)
+            if (o.product > 1) void loadShipment(o.id)
+            if (o.payment_status === 'paid' && !wantedShip) void goReading(o)
             else setStep('deposit')
           }
         }
       })
       .catch(() => setLoadFailed(true))
-  }, [profileId, wantedOrderId])
+  }, [profileId, wantedOrderId, wantedShip])
 
   // 구매 이력(재구매 대상)·입금 대기 주문 — 서버 판정의 표시용 미러
   const purchasedBySub = useMemo(() => {
@@ -138,6 +146,16 @@ export function OrderScreen({ profileId }: Props) {
       setToast('주문을 만들지 못했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function loadShipment(orderId: string) {
+    try {
+      setShipment(await getShipment(orderId))
+    } catch {
+      setShipment(null)
+    } finally {
+      setShipmentLoaded(true)
     }
   }
 
@@ -430,6 +448,9 @@ export function OrderScreen({ profileId }: Props) {
             {activeOrder.payment_status === 'paid' && (
               <PixelButton onClick={() => void goReading(activeOrder)}>고민별 사주 보기</PixelButton>
             )}
+            {activeOrder.payment_status === 'paid' && activeOrder.product > 1 && shipmentLoaded && (
+              <ShippingSection order={activeOrder} shipment={shipment} onSaved={setShipment} onToast={setToast} />
+            )}
           </>
         )}
 
@@ -634,6 +655,140 @@ export function OrderScreen({ profileId }: Props) {
         <BankAppSheet account={BANK_ACCOUNT.account} onCopied={setToast} onClose={() => setBankSheetOpen(false)} />
       )}
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+    </div>
+  )
+}
+
+// 배송지 입력·배송 상태 (§6.5 — 발송 전까지만 수정, 3-1·3-2)
+function ShippingSection({
+  order,
+  shipment,
+  onSaved,
+  onToast,
+}: {
+  order: OrderRow
+  shipment: ShipmentRow | null
+  onSaved: (s: ShipmentRow) => void
+  onToast: (m: string) => void
+}) {
+  const [editing, setEditing] = useState(!shipment)
+  const [receiver, setReceiver] = useState(shipment?.receiver ?? '')
+  const [phone, setPhone] = useState(shipment?.phone ?? '')
+  const [postcode, setPostcode] = useState(shipment?.postcode ?? '')
+  const [address, setAddress] = useState(shipment?.address ?? '')
+  const [detail, setDetail] = useState(shipment?.address_detail ?? '')
+  const [memo, setMemo] = useState(shipment?.memo ?? '')
+  const [saving, setSaving] = useState(false)
+
+  const status = order.shipping_status ?? 'awaiting'
+  const canEdit = status === 'awaiting'
+  const inputCls =
+    "h-[48px] w-full rounded-[4px] bg-white px-4 font-['Pretendard'] text-[16px] text-[#101010] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] placeholder:text-[#b1b1b1] focus:outline-none"
+
+  async function save() {
+    if (saving) return
+    if (!receiver.trim() || !phone.trim() || !postcode.trim() || !address.trim()) {
+      onToast('받는 사람, 연락처, 우편번호, 주소를 입력해 주세요.')
+      return
+    }
+    setSaving(true)
+    try {
+      const row = await upsertShippingAddress({
+        orderId: order.id,
+        receiver,
+        phone,
+        postcode,
+        address,
+        addressDetail: detail || undefined,
+        memo: memo || undefined,
+      })
+      onSaved(row)
+      setEditing(false)
+      onToast('배송지가 저장됐어요. 부적을 그려서 보내 드릴게요.')
+    } catch {
+      onToast('배송지 저장에 실패했어요. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4 rounded-[4px] border border-white/50 bg-white/5 px-4 py-5">
+      <div className="flex items-center justify-between">
+        <p className="font-['Mona12'] text-[14px] font-bold tracking-[1.12px]">배송</p>
+        <span className="rounded-full border-2 border-[#f31bc0] px-2 py-[2px] font-['Mona12'] text-[11px] text-[#f31bc0]">
+          {SHIPPING_STATUS_LABEL[status]}
+        </span>
+      </div>
+
+      {editing && canEdit ? (
+        <div className="flex flex-col gap-2">
+          <input className={inputCls} value={receiver} onChange={(e) => setReceiver(e.target.value)} placeholder="받는 사람" />
+          <input
+            className={inputCls}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/[^0-9-]/g, ''))}
+            placeholder="연락처"
+            inputMode="tel"
+          />
+          <input
+            className={inputCls}
+            value={postcode}
+            onChange={(e) => setPostcode(e.target.value.replace(/[^0-9]/g, '').slice(0, 5))}
+            placeholder="우편번호 (숫자 5자리)"
+            inputMode="numeric"
+          />
+          <input className={inputCls} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="주소" />
+          <input className={inputCls} value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="상세주소 (선택)" />
+          <input className={inputCls} value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="배송 메모 (선택)" />
+          <p className="text-[12px] text-[#888]">
+            <span>※</span> <span className="font-['Pretendard']">우편번호 검색은 준비 중이에요. 숫자 5자리를 직접 입력해 주세요.</span>
+          </p>
+          <PixelButton onClick={() => void save()} disabled={saving}>
+            배송지 저장
+          </PixelButton>
+        </div>
+      ) : shipment ? (
+        <div className="flex flex-col gap-2">
+          <p className="font-['Pretendard'] text-[14px] text-white/90">
+            {shipment.receiver} · {shipment.phone}
+          </p>
+          <p className="font-['Pretendard'] text-[14px] leading-relaxed break-keep text-white/80">
+            ({shipment.postcode}) {shipment.address} {shipment.address_detail ?? ''}
+          </p>
+          {shipment.memo && <p className="font-['Pretendard'] text-[13px] text-[#888]">메모: {shipment.memo}</p>}
+
+          {status === 'awaiting' && (
+            <>
+              <p className="font-['Pretendard'] text-[13px] text-white/70">부적을 그리고 있어요. 발송되면 송장번호를 알려 드릴게요.</p>
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="self-start font-['Pretendard'] text-[13px] text-[#888] underline underline-offset-2"
+              >
+                배송지 수정 (발송 전까지)
+              </button>
+            </>
+          )}
+          {status === 'shipping' && shipment.carrier && shipment.tracking_no && (
+            <a
+              href={`https://search.naver.com/search.naver?query=${encodeURIComponent(`${shipment.carrier} ${shipment.tracking_no}`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-['Pretendard'] text-[14px] text-[#f31bc0] underline underline-offset-2"
+            >
+              {shipment.carrier} {shipment.tracking_no} — 배송 조회
+            </a>
+          )}
+          {status === 'delivered' && (
+            <p className="font-['Pretendard'] text-[13px] leading-relaxed text-white/70">
+              배송이 완료됐어요. 부적이 마음에 닿았길 바라요.
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="font-['Pretendard'] text-[13px] text-white/70">배송지를 입력해 주세요.</p>
+      )}
     </div>
   )
 }

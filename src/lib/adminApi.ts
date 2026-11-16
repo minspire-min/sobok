@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { OrderRow } from './ordersApi'
+import type { OrderRow, ShipmentRow } from './ordersApi'
 
 // 어드민 — 관리자 판별은 서버(is_admin RPC, 이메일 허용 목록). 상태 변경도 전부 서버 RPC.
 export async function adminSignIn(email: string, password: string): Promise<void> {
@@ -72,6 +72,35 @@ export async function adminGetOrderExtras(orderId: string): Promise<{
     reading: (readingRes.data as never) ?? null,
     picks: (picksRes.data as never) ?? null,
   }
+}
+
+// 배송 관리 (3-3·3-4) — 제작 목록·송장 입력
+export async function adminListShipments(): Promise<Record<string, ShipmentRow>> {
+  const { data, error } = await supabase.from('shipments').select('*')
+  if (error) throw error
+  return Object.fromEntries(((data ?? []) as ShipmentRow[]).map((s) => [s.order_id, s]))
+}
+
+// 배송 부적 지정 (§17.2) — 장수는 서버가 상품에 맞게 검증
+export async function adminSetShippingTalismans(
+  orderId: string,
+  items: Array<{ hanja: string; korean: string }>,
+): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_set_shipping_talismans', { p_order_id: orderId, p_items: items })
+  if (error) throw error
+  return data as OrderRow
+}
+
+export async function adminShip(orderId: string, carrier: string, tracking: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_ship', { p_order_id: orderId, p_carrier: carrier, p_tracking: tracking })
+  if (error) throw error
+  return data as OrderRow
+}
+
+export async function adminDeliver(orderId: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_deliver', { p_order_id: orderId })
+  if (error) throw error
+  return data as OrderRow
 }
 
 export async function adminSetMemo(orderId: string, memo: string): Promise<OrderRow> {

@@ -15,6 +15,7 @@ import {
   requestWithdrawal,
   PAYMENT_STATUS_COLOR,
   PAYMENT_STATUS_LABEL,
+  SHIPPING_STATUS_LABEL,
   type OrderRow,
 } from '../lib/ordersApi'
 import { formatWon, PRODUCTS } from '../lib/products'
@@ -203,6 +204,14 @@ export function MyPageScreen() {
                   >
                     부적 보러 가기
                   </Link>
+                  {o.product > 1 && (
+                    <Link
+                      href={`/saju/${o.profile_id}/order?order=${o.id}&ship=1`}
+                      className="font-['Pretendard'] text-[13px] text-[#f31bc0] underline underline-offset-2"
+                    >
+                      배송 {o.shipping_status ? `(${SHIPPING_STATUS_LABEL[o.shipping_status]})` : ''}
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={() => setRefundTarget(o)}
@@ -261,7 +270,7 @@ export function MyPageScreen() {
       {/* 준비 중 메뉴 */}
       <div className="flex w-full max-w-[345px] flex-col gap-4 md:max-w-[480px]">
         <div className="flex flex-col rounded-[4px] border border-white/50 bg-white/5 px-4">
-          {['배송 정보', '리뷰 작성'].map((menu) => (
+          {['리뷰 작성'].map((menu) => (
             <div key={menu} className="flex items-center justify-between border-b border-white/10 py-4 last:border-b-0">
               <span className="font-['Pretendard'] text-[14px] text-white/50">{menu}</span>
               <span className="font-['Pretendard'] text-[12px] text-[#888]">준비 중</span>

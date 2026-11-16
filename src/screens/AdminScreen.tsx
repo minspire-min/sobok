@@ -6,11 +6,15 @@ import {
   adminCancelOrder,
   adminCompleteRefund,
   adminConfirmDeposit,
+  adminDeliver,
   adminGetOrderExtras,
   adminListOrders,
+  adminListShipments,
   adminRejectRefund,
   adminReviewRefund,
   adminSetMemo,
+  adminSetShippingTalismans,
+  adminShip,
   adminSignIn,
   checkIsAdmin,
 } from '../lib/adminApi'
@@ -21,11 +25,11 @@ import { computeFiveElementCounts } from '../lib/elementScore'
 import { ELEMENT_ORDER } from '../lib/elements'
 import { profileToFormInput } from '../lib/profilesApi'
 import { computeSaju } from '../lib/sajuPipeline'
-import { formatDate, PAYMENT_STATUS_LABEL, type OrderRow } from '../lib/ordersApi'
+import { formatDate, PAYMENT_STATUS_LABEL, SHIPPING_STATUS_LABEL, type OrderRow, type ShipmentRow } from '../lib/ordersApi'
 import { formatWon, PRODUCTS } from '../lib/products'
 
 // PRD §10.2 결제 관리 — 1차: 입금 확인 요청 처리. 라이트 테마(어드민은 픽셀 스타일 제외, §9.5)
-type Tab = 'awaiting' | 'refund' | 'inquiry' | 'all'
+type Tab = 'awaiting' | 'refund' | 'shipping' | 'inquiry' | 'all'
 
 export function AdminScreen() {
   const { loading, session, signOut } = useAuth()
@@ -34,6 +38,7 @@ export function AdminScreen() {
   const isAdmin = session && adminCheck?.uid === session.user.id ? adminCheck.ok : null
   const [orders, setOrders] = useState<OrderRow[] | null>(null)
   const [inquiries, setInquiries] = useState<InquiryRow[]>([])
+  const [shipments, setShipments] = useState<Record<string, ShipmentRow>>({})
   const [answeringId, setAnsweringId] = useState<string | null>(null)
   const [answerText, setAnswerText] = useState('')
   // 주문 상세 (§10.2 사주 확인 상세)
@@ -53,6 +58,9 @@ export function AdminScreen() {
     adminListInquiries()
       .then(setInquiries)
       .catch(() => setInquiries([]))
+    adminListShipments()
+      .then(setShipments)
+      .catch(() => setShipments({}))
   }, [])
 
   useEffect(() => {
@@ -153,6 +161,45 @@ export function AdminScreen() {
     } catch {
       window.alert('메모 저장에 실패했어요.')
     }
+  }
+
+  // 배송·제작 (3-3·3-4)
+  async function handleSetTalismans(o: OrderRow) {
+    const need = o.product === 2 ? 1 : 3
+    const current = (o.shipping_talismans ?? []).map((t) => `${t.hanja}:${t.korean}`).join(', ')
+    const input = window.prompt(
+      `배송 부적 ${need}개를 "한자:한글" 형식으로 입력하세요. 여러 개면 쉼표로 구분.\n예: 招財進寶:초재진보`,
+      current,
+    )
+    if (input === null) return
+    const items = input
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => {
+        const [hanja, korean] = s.split(':').map((x) => x.trim())
+        return { hanja: hanja ?? '', korean: korean ?? '' }
+      })
+    if (items.length !== need || items.some((i) => !i.hanja || !i.korean)) {
+      window.alert(`${need}개를 "한자:한글" 형식으로 입력해 주세요.`)
+      return
+    }
+    await runAction(o.id, () => adminSetShippingTalismans(o.id, items))
+  }
+
+  async function handleShip(o: OrderRow) {
+    const carrier = window.prompt('택배사를 입력하세요.', 'CU 편의점택배')
+    if (!carrier) return
+    const tracking = window.prompt('송장번호를 입력하세요.')
+    if (!tracking) return
+    await runAction(o.id, () => adminShip(o.id, carrier, tracking))
+    adminListShipments().then(setShipments).catch(() => {})
+  }
+
+  async function handleDeliver(o: OrderRow) {
+    if (!window.confirm(`주문 ${o.order_code}을(를) 배송 완료 처리할까요?`)) return
+    await runAction(o.id, () => adminDeliver(o.id))
+    adminListShipments().then(setShipments).catch(() => {})
   }
 
   async function handleAnswer(q: InquiryRow) {
@@ -262,6 +309,7 @@ export function AdminScreen() {
             [
               ['awaiting', '입금 대기'],
               ['refund', '환불'],
+              ['shipping', '배송·제작'],
               ['inquiry', '문의'],
               ['all', '전체 주문'],
             ] as Array<[Tab, string]>
@@ -276,6 +324,96 @@ export function AdminScreen() {
             </button>
           ))}
         </div>
+
+        {/* 배송·제작 탭 — 제작 목록(지정 부적·사주는 코드 클릭 상세에서) + 송장 처리 (3-3·3-4) */}
+        {tab === 'shipping' && (
+          <div className="flex flex-col gap-3">
+            {(() => {
+              const list = (orders ?? []).filter((o) => o.product > 1 && o.payment_status === 'paid' && o.shipping_status)
+              const rank = { awaiting: 0, shipping: 1, delivered: 2 } as Record<string, number>
+              const sorted = [...list].sort((a, b) => (rank[a.shipping_status!] ?? 9) - (rank[b.shipping_status!] ?? 9))
+              if (sorted.length === 0)
+                return <div className="rounded-lg border border-[#e5e5e5] bg-white p-6 text-center text-[13px] text-[#888]">제작·배송할 주문이 없어요.</div>
+              return sorted.map((o) => {
+                const ship = shipments[o.id]
+                return (
+                  <div key={o.id} className="flex flex-col gap-2 rounded-lg border border-[#e5e5e5] bg-white p-4">
+                    <div className="flex items-center justify-between">
+                      <span>
+                        <button type="button" onClick={() => openDetail(o)} className="font-bold underline underline-offset-2">
+                          {o.order_code}
+                        </button>
+                        <span className="ml-2 text-[13px]">
+                          {o.saju_snapshot?.nickname} · {subConcernLabel(o.sub_concern)} · 부적 {o.product === 2 ? 1 : 3}장
+                        </span>
+                      </span>
+                      <span className="rounded-full bg-[#101010] px-2 py-[2px] text-[11px] text-white">
+                        {SHIPPING_STATUS_LABEL[o.shipping_status!]}
+                      </span>
+                    </div>
+
+                    <p className="text-[13px]">
+                      {ship ? (
+                        <>({ship.postcode}) {ship.address} {ship.address_detail ?? ''} · {ship.receiver} {ship.phone}
+                        {ship.memo && <span className="text-[#888]"> · 메모: {ship.memo}</span>}</>
+                      ) : (
+                        <span className="font-bold text-[#d61f34]">배송지 미입력</span>
+                      )}
+                    </p>
+
+                    <p className="text-[13px]">
+                      그릴 부적:{' '}
+                      {o.shipping_talismans?.length
+                        ? o.shipping_talismans.map((t) => `${t.hanja}(${t.korean})`).join(', ')
+                        : <span className="font-bold text-[#f3b526]">미지정 — 사주를 보고 지정해 주세요</span>}
+                    </p>
+
+                    <div className="flex gap-2">
+                      {o.shipping_status === 'awaiting' && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busyId === o.id}
+                            onClick={() => void handleSetTalismans(o)}
+                            className="rounded-md border border-[#ddd] px-3 py-1.5 text-[12px] disabled:opacity-40"
+                          >
+                            부적 지정
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === o.id || !ship || !o.shipping_talismans?.length}
+                            onClick={() => void handleShip(o)}
+                            className="rounded-md bg-[#17c666] px-3 py-1.5 text-[12px] text-white disabled:opacity-40"
+                          >
+                            발송 처리 (송장 입력)
+                          </button>
+                        </>
+                      )}
+                      {o.shipping_status === 'shipping' && (
+                        <>
+                          <span className="py-1.5 text-[12px] text-[#555]">
+                            {ship?.carrier} {ship?.tracking_no}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={busyId === o.id}
+                            onClick={() => void handleDeliver(o)}
+                            className="rounded-md bg-[#101010] px-3 py-1.5 text-[12px] text-white disabled:opacity-40"
+                          >
+                            배송 완료 처리
+                          </button>
+                        </>
+                      )}
+                      {o.shipping_status === 'delivered' && (
+                        <span className="py-1.5 text-[12px] text-[#888]">배송 완료 {ship?.delivered_at ? formatDate(ship.delivered_at) : ''}</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            })()}
+          </div>
+        )}
 
         {/* 문의 탭 — 미답변 우선, 인라인 답변 작성 (§10.2 문의 메뉴) */}
         {tab === 'inquiry' && (
@@ -349,7 +487,7 @@ export function AdminScreen() {
           </div>
         )}
 
-        {tab !== 'inquiry' && (
+        {tab !== 'inquiry' && tab !== 'shipping' && (
         <div className="overflow-x-auto rounded-lg border border-[#e5e5e5] bg-white">
           <table className="w-full min-w-[820px] text-left text-[13px]">
             <thead className="border-b border-[#eee] text-[#888]">

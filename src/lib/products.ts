@@ -17,19 +17,19 @@ export const PRODUCTS: Record<
   },
   2: {
     name: '+ 배송 부적 1장',
-    desc: '사주와 고민에 맞춰 직접 그린 부적 1장을 보내 드려요',
+    desc: '사주와 고민에 맞춰 직접 그린 부적 1장을 보내 드려요. 손으로 그려 발송까지 시간이 걸려요(기간은 입금 확인 후 안내)',
     price: 30_000,
     repurchasePrice: 22_000,
     shippedCount: 1,
-    available: false, // 실물 배송은 단계 3에서 오픈 (PRD §15)
+    available: true, // 단계 3 오픈 (2026-11-17)
   },
   3: {
     name: '+ 배송 부적 3장',
-    desc: '직접 그린 부적 3장을 보내 드려요. 소중한 사람과 나누기 좋아요',
+    desc: '직접 그린 부적 3장을 보내 드려요. 소중한 사람과 나누기 좋아요(기간은 입금 확인 후 안내)',
     price: 50_000,
     repurchasePrice: 42_000,
     shippedCount: 3,
-    available: false,
+    available: true,
   },
 }
 

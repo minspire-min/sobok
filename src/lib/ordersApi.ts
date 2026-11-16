@@ -22,7 +22,75 @@ export type OrderRow = {
   refund_account: { bank: string; account: string; holder: string } | null
   refunded_at: string | null
   admin_memo: string | null
+  shipping_status: ShippingStatus | null // 결제2·3만, 결제1은 null
+  shipping_talismans: Array<{ hanja: string; korean: string }> | null // 지민 지정 배송 부적(§17.2)
   created_at: string
+}
+
+export type ShippingStatus =
+  | 'awaiting'
+  | 'shipping'
+  | 'delivered'
+  | 'exchange_requested'
+  | 'exchange_shipping'
+  | 'exchange_done'
+  | 'return_requested'
+  | 'return_shipping'
+  | 'return_done'
+
+export const SHIPPING_STATUS_LABEL: Record<ShippingStatus, string> = {
+  awaiting: '배송 대기',
+  shipping: '배송중',
+  delivered: '배송 완료',
+  exchange_requested: '교환 신청',
+  exchange_shipping: '교환 배송중',
+  exchange_done: '교환 완료',
+  return_requested: '반품 신청',
+  return_shipping: '반품 배송중',
+  return_done: '반품 완료',
+}
+
+export type ShipmentRow = {
+  order_id: string
+  receiver: string
+  phone: string
+  postcode: string
+  address: string
+  address_detail: string | null
+  memo: string | null
+  carrier: string | null
+  tracking_no: string | null
+  shipped_at: string | null
+  delivered_at: string | null
+}
+
+export async function getShipment(orderId: string): Promise<ShipmentRow | null> {
+  const { data, error } = await supabase.from('shipments').select('*').eq('order_id', orderId).maybeSingle()
+  if (error) throw error
+  return (data as ShipmentRow) ?? null
+}
+
+// 배송지 입력·수정 — 결제 완료 + 발송 전까지 (§6.5)
+export async function upsertShippingAddress(params: {
+  orderId: string
+  receiver: string
+  phone: string
+  postcode: string
+  address: string
+  addressDetail?: string
+  memo?: string
+}): Promise<ShipmentRow> {
+  const { data, error } = await supabase.rpc('upsert_shipping_address', {
+    p_order_id: params.orderId,
+    p_receiver: params.receiver,
+    p_phone: params.phone,
+    p_postcode: params.postcode,
+    p_address: params.address,
+    p_address_detail: params.addressDetail ?? null,
+    p_memo: params.memo ?? null,
+  })
+  if (error) throw error
+  return data as ShipmentRow
 }
 
 export const PAYMENT_STATUS_LABEL: Record<OrderRow['payment_status'], string> = {
