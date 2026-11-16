@@ -15,6 +15,7 @@ import {
   checkIsAdmin,
 } from '../lib/adminApi'
 import { adminAnswerInquiry, adminListInquiries, INQUIRY_STATUS_LABEL, type InquiryRow } from '../lib/inquiriesApi'
+import { notify } from '../lib/notifyApi'
 import { subConcernLabel } from '../lib/concerns'
 import { computeFiveElementCounts } from '../lib/elementScore'
 import { ELEMENT_ORDER } from '../lib/elements'
@@ -82,6 +83,7 @@ export function AdminScreen() {
     try {
       const updated = await adminConfirmDeposit(o.id)
       setOrders((prev) => (prev ?? []).map((x) => (x.id === updated.id ? updated : x)))
+      void notify('paid', o.id) // 결제 확인 메일 (키 없으면 발송 대기 기록만)
     } catch {
       window.alert('처리에 실패했어요. 새로고침 후 다시 시도해 주세요.')
     } finally {
@@ -111,6 +113,7 @@ export function AdminScreen() {
     const acc = o.refund_account
     if (!window.confirm(`${acc?.bank ?? ''} ${acc?.account ?? ''} (${acc?.holder ?? ''})로 ${formatWon(o.amount)} 이체를 마쳤나요?\n확인을 누르면 환불 완료로 바뀌고 유료 콘텐츠가 잠깁니다.`)) return
     await runAction(o.id, () => adminCompleteRefund(o.id))
+    void notify('refunded', o.id)
   }
 
   async function handleRejectRefund(o: OrderRow) {
@@ -159,6 +162,7 @@ export function AdminScreen() {
       setInquiries((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
       setAnsweringId(null)
       setAnswerText('')
+      void notify('inquiry_answered', q.id) // 답변 알림 (§6.6 — 알림 없으면 사용자가 다시 들어와야 함)
     } catch {
       window.alert('답변 저장에 실패했어요. 새로고침 후 다시 시도해 주세요.')
     }
