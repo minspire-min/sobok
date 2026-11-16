@@ -103,6 +103,37 @@ export async function adminDeliver(orderId: string): Promise<OrderRow> {
   return data as OrderRow
 }
 
+// 교환·반품 처리 (3-5, §7.2·7.3)
+export async function adminExchangeShip(orderId: string, carrier: string, tracking: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_exchange_ship', { p_order_id: orderId, p_carrier: carrier, p_tracking: tracking })
+  if (error) throw error
+  return data as OrderRow
+}
+
+export async function adminExchangeDone(orderId: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_exchange_done', { p_order_id: orderId })
+  if (error) throw error
+  return data as OrderRow
+}
+
+export async function adminReturnInTransit(orderId: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_return_in_transit', { p_order_id: orderId })
+  if (error) throw error
+  return data as OrderRow
+}
+
+export async function adminReturnComplete(orderId: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_return_complete', { p_order_id: orderId })
+  if (error) throw error
+  return data as OrderRow
+}
+
+export async function adminRejectClaim(orderId: string, memo: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_reject_claim', { p_order_id: orderId, p_memo: memo })
+  if (error) throw error
+  return data as OrderRow
+}
+
 export async function adminSetMemo(orderId: string, memo: string): Promise<OrderRow> {
   const { data, error } = await supabase.rpc('admin_set_memo', { p_order_id: orderId, p_memo: memo })
   if (error) throw error

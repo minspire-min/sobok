@@ -17,6 +17,7 @@ export type OrderRow = {
   deposit_due_at: string
   deposit_reported_at: string | null
   paid_at: string | null
+  reading_first_viewed_at: string | null // 분석 최초 열람 — 환불 가능 여부·차액 계산 기준(결정 #4·§17.3)
   saju_snapshot: SajuProfileRow // 주문 시점의 사주 입력값 — 부적 추천 계산 기준
   refund_reason: string | null
   refund_account: { bank: string; account: string; holder: string } | null
@@ -24,6 +25,8 @@ export type OrderRow = {
   admin_memo: string | null
   shipping_status: ShippingStatus | null // 결제2·3만, 결제1은 null
   shipping_talismans: Array<{ hanja: string; korean: string }> | null // 지민 지정 배송 부적(§17.2)
+  claim_reason: string | null // 교환·반품 사유
+  refund_amount: number | null // 반품 환불 예정액(서버 계산, §17.3 차액 규칙)
   created_at: string
 }
 
@@ -62,6 +65,31 @@ export type ShipmentRow = {
   tracking_no: string | null
   shipped_at: string | null
   delivered_at: string | null
+}
+
+// 교환·반품 (3-5) — 배송 완료 후 7일 내(서버 검증, 전자상거래법 청약철회 기준)
+export async function requestExchange(orderId: string, reason: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('request_exchange', { p_order_id: orderId, p_reason: reason })
+  if (error) throw error
+  return data as OrderRow
+}
+
+export async function requestReturn(params: {
+  orderId: string
+  reason: string
+  bank: string
+  account: string
+  holder: string
+}): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('request_return', {
+    p_order_id: params.orderId,
+    p_reason: params.reason,
+    p_bank: params.bank,
+    p_account: params.account,
+    p_holder: params.holder,
+  })
+  if (error) throw error
+  return data as OrderRow
 }
 
 export async function getShipment(orderId: string): Promise<ShipmentRow | null> {

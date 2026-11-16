@@ -15,6 +15,8 @@ import {
   getShipment,
   listOrdersForProfile,
   reportDeposit,
+  requestExchange,
+  requestReturn,
   upsertShippingAddress,
   PAYMENT_STATUS_COLOR,
   PAYMENT_STATUS_LABEL,
@@ -449,7 +451,16 @@ export function OrderScreen({ profileId }: Props) {
               <PixelButton onClick={() => void goReading(activeOrder)}>고민별 사주 보기</PixelButton>
             )}
             {activeOrder.payment_status === 'paid' && activeOrder.product > 1 && shipmentLoaded && (
-              <ShippingSection order={activeOrder} shipment={shipment} onSaved={setShipment} onToast={setToast} />
+              <ShippingSection
+                order={activeOrder}
+                shipment={shipment}
+                onSaved={setShipment}
+                onToast={setToast}
+                onOrderUpdated={(o) => {
+                  setActiveOrder(o)
+                  setOrders((prev) => (prev ?? []).map((x) => (x.id === o.id ? o : x)))
+                }}
+              />
             )}
           </>
         )}
@@ -665,11 +676,13 @@ function ShippingSection({
   shipment,
   onSaved,
   onToast,
+  onOrderUpdated,
 }: {
   order: OrderRow
   shipment: ShipmentRow | null
   onSaved: (s: ShipmentRow) => void
   onToast: (m: string) => void
+  onOrderUpdated: (o: OrderRow) => void
 }) {
   const [editing, setEditing] = useState(!shipment)
   const [receiver, setReceiver] = useState(shipment?.receiver ?? '')
@@ -680,8 +693,52 @@ function ShippingSection({
   const [memo, setMemo] = useState(shipment?.memo ?? '')
   const [saving, setSaving] = useState(false)
 
+  // 교환·반품 (3-5) — 배송 완료 후 7일 내(서버도 검증)
+  const [claimOpen, setClaimOpen] = useState<'exchange' | 'return' | null>(null)
+  const [claimReason, setClaimReason] = useState('')
+  const [rBank, setRBank] = useState('')
+  const [rAccount, setRAccount] = useState('')
+  const [rHolder, setRHolder] = useState('')
+  const [claimBusy, setClaimBusy] = useState(false)
+
   const status = order.shipping_status ?? 'awaiting'
   const canEdit = status === 'awaiting'
+  const [mountedAt] = useState(() => Date.now()) // 렌더 중 Date.now() 호출 방지(순수성)
+  const within7Days = shipment?.delivered_at
+    ? mountedAt - new Date(shipment.delivered_at).getTime() < 7 * 24 * 60 * 60 * 1000
+    : false
+
+  async function submitClaim() {
+    if (claimBusy || !claimOpen) return
+    if (claimReason.trim().length < 5) {
+      onToast('사유를 5자 이상 적어 주세요.')
+      return
+    }
+    if (claimOpen === 'return' && (!rBank.trim() || !rAccount.trim() || !rHolder.trim())) {
+      onToast('환불받을 계좌 정보를 모두 입력해 주세요.')
+      return
+    }
+    setClaimBusy(true)
+    try {
+      const updated =
+        claimOpen === 'exchange'
+          ? await requestExchange(order.id, claimReason)
+          : await requestReturn({ orderId: order.id, reason: claimReason, bank: rBank, account: rAccount, holder: rHolder })
+      onOrderUpdated(updated)
+      setClaimOpen(null)
+      setClaimReason('')
+      onToast(claimOpen === 'exchange' ? '교환 신청이 접수됐어요.' : '반품 신청이 접수됐어요.')
+    } catch (e) {
+      onToast(
+        e instanceof Error && e.message.includes('PERIOD_OVER')
+          ? '배송 완료 후 7일이 지나 신청할 수 없어요. 문의하기로 남겨 주세요.'
+          : '신청에 실패했어요. 잠시 후 다시 시도해 주세요.',
+      )
+    } finally {
+      setClaimBusy(false)
+    }
+  }
+
   const inputCls =
     "h-[48px] w-full rounded-[4px] bg-white px-4 font-['Pretendard'] text-[16px] text-[#101010] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] placeholder:text-[#b1b1b1] focus:outline-none"
 
@@ -781,13 +838,118 @@ function ShippingSection({
             </a>
           )}
           {status === 'delivered' && (
+            <>
+              <p className="font-['Pretendard'] text-[13px] leading-relaxed text-white/70">
+                배송이 완료됐어요. 부적이 마음에 닿았길 바라요.
+              </p>
+              {within7Days && (
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setClaimOpen('exchange')}
+                    className="font-['Pretendard'] text-[13px] text-white/60 underline underline-offset-2"
+                  >
+                    교환 신청
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setClaimOpen('return')}
+                    className="font-['Pretendard'] text-[13px] text-white/60 underline underline-offset-2"
+                  >
+                    반품 신청
+                  </button>
+                  <span className="font-['Pretendard'] text-[12px] text-[#888]">(배송 완료 후 7일 내)</span>
+                </div>
+              )}
+            </>
+          )}
+          {status === 'exchange_requested' && (
             <p className="font-['Pretendard'] text-[13px] leading-relaxed text-white/70">
-              배송이 완료됐어요. 부적이 마음에 닿았길 바라요.
+              교환 신청이 접수됐어요. 확인 후 새로 그려서 보내 드릴게요.
             </p>
+          )}
+          {status === 'exchange_shipping' && shipment.carrier && shipment.tracking_no && (
+            <a
+              href={`https://search.naver.com/search.naver?query=${encodeURIComponent(`${shipment.carrier} ${shipment.tracking_no}`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-['Pretendard'] text-[14px] text-[#f31bc0] underline underline-offset-2"
+            >
+              새 부적이 가고 있어요 — {shipment.carrier} {shipment.tracking_no} 배송 조회
+            </a>
+          )}
+          {status === 'exchange_done' && (
+            <p className="font-['Pretendard'] text-[13px] text-white/70">교환이 완료됐어요.</p>
+          )}
+          {status === 'return_requested' && (
+            <p className="font-['Pretendard'] text-[13px] leading-relaxed break-keep text-white/70">
+              반품 신청이 접수됐어요. 반품 보낼 주소와 방법을 이메일로 안내드릴게요.
+            </p>
+          )}
+          {status === 'return_shipping' && (
+            <p className="font-['Pretendard'] text-[13px] text-white/70">반품 확인 중이에요. 확인되면 환불해 드려요.</p>
+          )}
+          {status === 'return_done' && (
+            <p className="font-['Pretendard'] text-[13px] text-white/70">반품과 환불이 완료됐어요. 이용해 주셔서 감사해요.</p>
           )}
         </div>
       ) : (
         <p className="font-['Pretendard'] text-[13px] text-white/70">배송지를 입력해 주세요.</p>
+      )}
+
+      {/* 교환·반품 신청 모달 — 하자 사진 첨부는 보류(시트 #14), 사유 텍스트로 확인 */}
+      {claimOpen && (
+        <DetailModal
+          title={claimOpen === 'exchange' ? '교환 신청' : '반품 신청'}
+          onClose={() => setClaimOpen(null)}
+        >
+          <div className="flex flex-col gap-3">
+            <p className="font-['Pretendard'] text-[13px] leading-relaxed break-keep text-[#8c8c8c]">
+              {claimOpen === 'exchange'
+                ? '파손·오배송 등 사유를 적어 주세요. 확인 후 새로 그려서 보내 드려요.'
+                : `사유와 환불받을 계좌를 적어 주세요. 분석을 이미 열람한 경우 분석 금액을 뺀 차액이 환불돼요${
+                    order.refund_amount ? '' : order.reading_first_viewed_at ? ` (예상 ${formatWon(order.amount - (order.kind === 'new' ? 10000 : 2000))})` : ` (전액 ${formatWon(order.amount)})`
+                  }. 반품 보낼 주소는 접수 후 안내드려요.`}
+            </p>
+            <textarea
+              value={claimReason}
+              onChange={(e) => setClaimReason(e.target.value.slice(0, 300))}
+              placeholder="사유를 적어 주세요"
+              className="h-[88px] resize-none rounded-[4px] border border-[#ddd] px-3 py-2 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
+            />
+            {claimOpen === 'return' && (
+              <>
+                <input
+                  value={rBank}
+                  onChange={(e) => setRBank(e.target.value)}
+                  placeholder="환불받을 은행명"
+                  className="h-[44px] rounded-[4px] border border-[#ddd] px-3 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
+                />
+                <input
+                  value={rAccount}
+                  onChange={(e) => setRAccount(e.target.value.replace(/[^0-9-]/g, ''))}
+                  placeholder="계좌번호"
+                  inputMode="numeric"
+                  className="h-[44px] rounded-[4px] border border-[#ddd] px-3 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
+                />
+                <input
+                  value={rHolder}
+                  onChange={(e) => setRHolder(e.target.value)}
+                  placeholder="예금주"
+                  className="h-[44px] rounded-[4px] border border-[#ddd] px-3 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
+                />
+              </>
+            )}
+            <button
+              type="button"
+              disabled={claimBusy}
+              onClick={() => void submitClaim()}
+              className="h-[44px] rounded-[4px] bg-[#f31bc0] font-['Pretendard'] text-[14px] text-white disabled:opacity-40"
+            >
+              {claimOpen === 'exchange' ? '교환 신청하기' : '반품 신청하기'}
+            </button>
+          </div>
+        </DetailModal>
       )}
     </div>
   )

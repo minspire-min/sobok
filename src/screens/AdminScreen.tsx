@@ -7,10 +7,15 @@ import {
   adminCompleteRefund,
   adminConfirmDeposit,
   adminDeliver,
+  adminExchangeDone,
+  adminExchangeShip,
   adminGetOrderExtras,
   adminListOrders,
   adminListShipments,
+  adminRejectClaim,
   adminRejectRefund,
+  adminReturnComplete,
+  adminReturnInTransit,
   adminReviewRefund,
   adminSetMemo,
   adminSetShippingTalismans,
@@ -202,6 +207,29 @@ export function AdminScreen() {
     adminListShipments().then(setShipments).catch(() => {})
   }
 
+  // 교환·반품 (3-5)
+  async function handleExchangeShip(o: OrderRow) {
+    const carrier = window.prompt('교환품 택배사를 입력하세요.', 'CU 편의점택배')
+    if (!carrier) return
+    const tracking = window.prompt('새 송장번호를 입력하세요.')
+    if (!tracking) return
+    await runAction(o.id, () => adminExchangeShip(o.id, carrier, tracking))
+    adminListShipments().then(setShipments).catch(() => {})
+  }
+
+  async function handleReturnComplete(o: OrderRow) {
+    const amount = o.refund_amount ?? o.amount
+    if (!window.confirm(`반품 회수를 확인했고, ${formatWon(amount)} 환불 이체를 마쳤나요?\n확인을 누르면 반품·환불 완료로 처리됩니다.`)) return
+    await runAction(o.id, () => adminReturnComplete(o.id))
+    void notify('refunded', o.id)
+  }
+
+  async function handleRejectClaim(o: OrderRow) {
+    const memo = window.prompt('반려 사유를 입력하세요. (배송 완료·결제 완료 상태로 돌아갑니다)')
+    if (!memo) return
+    await runAction(o.id, () => adminRejectClaim(o.id, memo))
+  }
+
   async function handleAnswer(q: InquiryRow) {
     if (!answerText.trim()) return
     try {
@@ -330,7 +358,17 @@ export function AdminScreen() {
           <div className="flex flex-col gap-3">
             {(() => {
               const list = (orders ?? []).filter((o) => o.product > 1 && o.payment_status === 'paid' && o.shipping_status)
-              const rank = { awaiting: 0, shipping: 1, delivered: 2 } as Record<string, number>
+              const rank = {
+                exchange_requested: 0,
+                return_requested: 0,
+                awaiting: 1,
+                exchange_shipping: 2,
+                shipping: 2,
+                return_shipping: 2,
+                delivered: 3,
+                exchange_done: 4,
+                return_done: 4,
+              } as Record<string, number>
               const sorted = [...list].sort((a, b) => (rank[a.shipping_status!] ?? 9) - (rank[b.shipping_status!] ?? 9))
               if (sorted.length === 0)
                 return <div className="rounded-lg border border-[#e5e5e5] bg-white p-6 text-center text-[13px] text-[#888]">제작·배송할 주문이 없어요.</div>
@@ -407,7 +445,84 @@ export function AdminScreen() {
                       {o.shipping_status === 'delivered' && (
                         <span className="py-1.5 text-[12px] text-[#888]">배송 완료 {ship?.delivered_at ? formatDate(ship.delivered_at) : ''}</span>
                       )}
+                      {o.shipping_status === 'exchange_requested' && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busyId === o.id}
+                            onClick={() => void handleExchangeShip(o)}
+                            className="rounded-md bg-[#f3b526] px-3 py-1.5 text-[12px] text-white disabled:opacity-40"
+                          >
+                            교환 발송 (새 송장)
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === o.id}
+                            onClick={() => void handleRejectClaim(o)}
+                            className="rounded-md border border-[#ddd] px-3 py-1.5 text-[12px] disabled:opacity-40"
+                          >
+                            반려
+                          </button>
+                        </>
+                      )}
+                      {o.shipping_status === 'exchange_shipping' && (
+                        <>
+                          <span className="py-1.5 text-[12px] text-[#555]">{ship?.carrier} {ship?.tracking_no}</span>
+                          <button
+                            type="button"
+                            disabled={busyId === o.id}
+                            onClick={() => void runAction(o.id, () => adminExchangeDone(o.id))}
+                            className="rounded-md bg-[#101010] px-3 py-1.5 text-[12px] text-white disabled:opacity-40"
+                          >
+                            교환 완료 처리
+                          </button>
+                        </>
+                      )}
+                      {(o.shipping_status === 'return_requested' || o.shipping_status === 'return_shipping') && (
+                        <>
+                          {o.shipping_status === 'return_requested' && (
+                            <button
+                              type="button"
+                              disabled={busyId === o.id}
+                              onClick={() => void runAction(o.id, () => adminReturnInTransit(o.id))}
+                              className="rounded-md border border-[#ddd] px-3 py-1.5 text-[12px] disabled:opacity-40"
+                            >
+                              반품 배송중 표시
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            disabled={busyId === o.id}
+                            onClick={() => void handleReturnComplete(o)}
+                            className="rounded-md bg-[#17c666] px-3 py-1.5 text-[12px] text-white disabled:opacity-40"
+                          >
+                            회수 확인·환불 완료
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === o.id}
+                            onClick={() => void handleRejectClaim(o)}
+                            className="rounded-md border border-[#ddd] px-3 py-1.5 text-[12px] disabled:opacity-40"
+                          >
+                            반려
+                          </button>
+                        </>
+                      )}
+                      {(o.shipping_status === 'exchange_done' || o.shipping_status === 'return_done') && (
+                        <span className="py-1.5 text-[12px] text-[#888]">{SHIPPING_STATUS_LABEL[o.shipping_status]}</span>
+                      )}
                     </div>
+                    {o.claim_reason && ['exchange_requested', 'exchange_shipping', 'return_requested', 'return_shipping'].includes(o.shipping_status ?? '') && (
+                      <p className="text-[12px] text-[#888]">
+                        사유: {o.claim_reason}
+                        {o.shipping_status?.startsWith('return') && (
+                          <>
+                            {' '}· 환불 예정 <span className="font-bold text-[#101010]">{formatWon(o.refund_amount ?? o.amount)}</span>
+                            {o.refund_account && ` → ${o.refund_account.bank} ${o.refund_account.account} (${o.refund_account.holder})`}
+                          </>
+                        )}
+                      </p>
+                    )}
                   </div>
                 )
               })
