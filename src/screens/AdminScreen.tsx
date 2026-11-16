@@ -4,8 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../lib/auth'
 import {
   adminCancelOrder,
+  adminCompleteRefund,
   adminConfirmDeposit,
   adminListOrders,
+  adminRejectRefund,
+  adminReviewRefund,
   adminSignIn,
   checkIsAdmin,
 } from '../lib/adminApi'
@@ -14,11 +17,13 @@ import { formatDate, PAYMENT_STATUS_LABEL, type OrderRow } from '../lib/ordersAp
 import { formatWon, PRODUCTS } from '../lib/products'
 
 // PRD §10.2 결제 관리 — 1차: 입금 확인 요청 처리. 라이트 테마(어드민은 픽셀 스타일 제외, §9.5)
-type Tab = 'awaiting' | 'all'
+type Tab = 'awaiting' | 'refund' | 'all'
 
 export function AdminScreen() {
   const { loading, session, signOut } = useAuth()
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  // 세션별 관리자 판정 — 세션이 바뀌면 자동으로 null(판정 전)로 돌아간다
+  const [adminCheck, setAdminCheck] = useState<{ uid: string; ok: boolean } | null>(null)
+  const isAdmin = session && adminCheck?.uid === session.user.id ? adminCheck.ok : null
   const [orders, setOrders] = useState<OrderRow[] | null>(null)
   const [tab, setTab] = useState<Tab>('awaiting')
   const [email, setEmail] = useState('')
@@ -33,15 +38,16 @@ export function AdminScreen() {
   }, [])
 
   useEffect(() => {
-    if (loading) return
-    if (!session) {
-      setIsAdmin(null)
-      return
-    }
+    if (loading || !session) return
+    let cancelled = false
     checkIsAdmin().then((ok) => {
-      setIsAdmin(ok)
+      if (cancelled) return
+      setAdminCheck({ uid: session.user.id, ok })
       if (ok) refresh()
     })
+    return () => {
+      cancelled = true
+    }
   }, [loading, session, refresh])
 
   async function handleLogin() {
@@ -69,9 +75,13 @@ export function AdminScreen() {
   async function handleCancel(o: OrderRow) {
     const memo = window.prompt(`주문 ${o.order_code}을(를) 취소합니다. 사유를 입력하세요.`, '고객 요청 취소')
     if (memo === null) return
-    setBusyId(o.id)
+    await runAction(o.id, () => adminCancelOrder(o.id, memo))
+  }
+
+  async function runAction(id: string, fn: () => Promise<OrderRow>) {
+    setBusyId(id)
     try {
-      const updated = await adminCancelOrder(o.id, memo)
+      const updated = await fn()
       setOrders((prev) => (prev ?? []).map((x) => (x.id === updated.id ? updated : x)))
     } catch {
       window.alert('처리에 실패했어요. 새로고침 후 다시 시도해 주세요.')
@@ -80,12 +90,25 @@ export function AdminScreen() {
     }
   }
 
+  async function handleCompleteRefund(o: OrderRow) {
+    const acc = o.refund_account
+    if (!window.confirm(`${acc?.bank ?? ''} ${acc?.account ?? ''} (${acc?.holder ?? ''})로 ${formatWon(o.amount)} 이체를 마쳤나요?\n확인을 누르면 환불 완료로 바뀌고 유료 콘텐츠가 잠깁니다.`)) return
+    await runAction(o.id, () => adminCompleteRefund(o.id))
+  }
+
+  async function handleRejectRefund(o: OrderRow) {
+    const memo = window.prompt('반려 사유를 입력하세요. (사용자 상태가 결제 완료로 돌아갑니다)')
+    if (!memo) return
+    await runAction(o.id, () => adminRejectRefund(o.id, memo))
+  }
+
   const stats = useMemo(() => {
     const list = orders ?? []
     const today = new Date().toDateString()
     return {
       reported: list.filter((o) => o.payment_status === 'awaiting_deposit' && o.deposit_reported_at).length,
       awaiting: list.filter((o) => o.payment_status === 'awaiting_deposit').length,
+      refunds: list.filter((o) => o.payment_status === 'refund_requested' || o.payment_status === 'refund_reviewing').length,
       paidToday: list.filter((o) => o.paid_at && new Date(o.paid_at).toDateString() === today).length,
       total: list.length,
     }
@@ -94,6 +117,9 @@ export function AdminScreen() {
   const visible = useMemo(() => {
     const list = orders ?? []
     if (tab === 'all') return list
+    if (tab === 'refund') {
+      return list.filter((o) => ['refund_requested', 'refund_reviewing', 'refunded'].includes(o.payment_status))
+    }
     // 입금 대기 탭 — 입금 확인 요청이 온 주문을 맨 위로
     return list
       .filter((o) => o.payment_status === 'awaiting_deposit')
@@ -164,8 +190,8 @@ export function AdminScreen() {
           {[
             ['입금 확인 요청', stats.reported, '#f31bc0'],
             ['입금 대기 전체', stats.awaiting, '#101010'],
+            ['환불 처리 중', stats.refunds, '#f3b526'],
             ['오늘 결제 완료', stats.paidToday, '#17c666'],
-            ['전체 주문', stats.total, '#888'],
           ].map(([label, value, color]) => (
             <div key={label as string} className="rounded-lg border border-[#e5e5e5] bg-white p-4">
               <p className="text-[12px] text-[#888]">{label}</p>
@@ -180,6 +206,7 @@ export function AdminScreen() {
           {(
             [
               ['awaiting', '입금 대기'],
+              ['refund', '환불'],
               ['all', '전체 주문'],
             ] as Array<[Tab, string]>
           ).map(([key, label]) => (
@@ -255,6 +282,42 @@ export function AdminScreen() {
                         >
                           취소
                         </button>
+                      </div>
+                    )}
+                    {o.payment_status === 'refund_requested' && (
+                      <button
+                        type="button"
+                        disabled={busyId === o.id}
+                        onClick={() => void runAction(o.id, () => adminReviewRefund(o.id))}
+                        className="rounded-md bg-[#f3b526] px-3 py-1.5 text-[12px] text-white disabled:opacity-40"
+                      >
+                        검토 시작
+                      </button>
+                    )}
+                    {o.payment_status === 'refund_reviewing' && (
+                      <div className="flex flex-col gap-1">
+                        <p className="text-[12px] text-[#555]">
+                          {o.refund_account?.bank} {o.refund_account?.account} ({o.refund_account?.holder})
+                        </p>
+                        {o.refund_reason && <p className="text-[12px] text-[#888]">사유: {o.refund_reason}</p>}
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={busyId === o.id}
+                            onClick={() => void handleCompleteRefund(o)}
+                            className="rounded-md bg-[#17c666] px-3 py-1.5 text-[12px] text-white disabled:opacity-40"
+                          >
+                            환불 완료
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === o.id}
+                            onClick={() => void handleRejectRefund(o)}
+                            className="rounded-md border border-[#ddd] px-3 py-1.5 text-[12px] disabled:opacity-40"
+                          >
+                            반려
+                          </button>
+                        </div>
                       </div>
                     )}
                   </td>

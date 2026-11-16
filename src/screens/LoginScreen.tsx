@@ -11,7 +11,7 @@ import { useAuth } from '../lib/auth'
 // PRD §6.3 — 카카오·구글 두 버튼. 최초 로그인 시 약관·개인정보(필수), 마케팅(선택) 동의.
 // OAuth 왕복 후에도 이 화면으로 돌아와(redirectTo=/login) 동의 여부에 따라 분기한다.
 export function LoginScreen() {
-  const { loading, session, consented, signInWithProvider, completeConsent } = useAuth()
+  const { loading, session, consented, withdrawnAt, signInWithProvider, completeConsent, signOut } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const storedNext = typeof window === 'undefined' ? null : sessionStorage.getItem('auth:next')
@@ -24,11 +24,11 @@ export function LoginScreen() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (!loading && session && consented) {
+    if (!loading && session && consented && !withdrawnAt) {
       sessionStorage.removeItem('auth:next')
       router.replace(next)
     }
-  }, [loading, session, consented, router, next])
+  }, [loading, session, consented, withdrawnAt, router, next])
 
   if (loading) return <div className="min-h-dvh bg-[#1a1a1a]" />
 
@@ -54,7 +54,21 @@ export function LoginScreen() {
         </p>
       </div>
 
-      {!session ? (
+      {session && withdrawnAt ? (
+        // §17.5 — 탈퇴 후 7일간 재가입 불가
+        <div className="flex w-full max-w-[361px] flex-col gap-4 rounded-[4px] border border-white/50 bg-white/5 px-4 py-5">
+          <p className="font-['Pretendard'] text-[14px] leading-relaxed break-keep text-white/85">
+            탈퇴 처리 중인 계정이에요. 개인정보는 신청일로부터 7일 안에 삭제되며, 그동안은 다시 가입할 수 없어요.
+          </p>
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="font-['Pretendard'] text-[13px] text-[#888] underline underline-offset-2"
+          >
+            로그아웃
+          </button>
+        </div>
+      ) : !session ? (
         <div className="flex w-full max-w-[361px] flex-col gap-3">
           {/* 소셜 버튼은 각 사 브랜드 가이드 색을 따른다 (픽셀 스타일 예외) */}
           <button

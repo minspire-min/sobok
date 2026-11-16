@@ -18,6 +18,9 @@ export type OrderRow = {
   deposit_reported_at: string | null
   paid_at: string | null
   saju_snapshot: SajuProfileRow // 주문 시점의 사주 입력값 — 부적 추천 계산 기준
+  refund_reason: string | null
+  refund_account: { bank: string; account: string; holder: string } | null
+  refunded_at: string | null
   created_at: string
 }
 
@@ -68,6 +71,38 @@ export async function createOrder(params: {
   })
   if (error) throw error
   return data as OrderRow
+}
+
+// 마이 > 결제 정보 — 이 계정의 전체 주문 (사주 구분 없이)
+export async function listMyOrders(): Promise<OrderRow[]> {
+  const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as OrderRow[]
+}
+
+// 환불 신청 — 결제 완료 + 분석 열람 전만 가능(결정 #4). 환불 계좌는 지민이 직접 이체할 곳(§11.5)
+export async function requestRefund(params: {
+  orderId: string
+  reason: string
+  bank: string
+  account: string
+  holder: string
+}): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('request_refund', {
+    p_order_id: params.orderId,
+    p_reason: params.reason,
+    p_bank: params.bank,
+    p_account: params.account,
+    p_holder: params.holder,
+  })
+  if (error) throw error
+  return data as OrderRow
+}
+
+// 회원 탈퇴 신청 — 진행 중 주문이 있으면 서버가 거부(ACTIVE_ORDERS)
+export async function requestWithdrawal(): Promise<void> {
+  const { error } = await supabase.rpc('request_withdrawal')
+  if (error) throw error
 }
 
 export async function reportDeposit(orderId: string): Promise<void> {

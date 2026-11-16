@@ -12,6 +12,7 @@ type AuthState = {
   session: Session | null
   consented: boolean
   marketingConsent: boolean
+  withdrawnAt: string | null // 탈퇴 신청 시각 — 있으면 서비스 이용 차단(§17.5 7일 재가입 불가)
   signInWithProvider: (provider: 'kakao' | 'google', next: string) => Promise<void>
   completeConsent: (marketing: boolean) => Promise<void>
   updateMarketingConsent: (value: boolean) => Promise<void>
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [consented, setConsented] = useState(false)
   const [marketingConsent, setMarketingConsent] = useState(false)
+  const [withdrawnAt, setWithdrawnAt] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -38,14 +40,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!session) {
         setConsented(false)
         setMarketingConsent(false)
+        setWithdrawnAt(null)
         setLoading(false)
         return
       }
       setLoading(true)
-      const { data } = await supabase.from('users').select('marketing_consent').eq('id', session.user.id).maybeSingle()
+      const { data } = await supabase
+        .from('users')
+        .select('marketing_consent, withdrawal_requested_at')
+        .eq('id', session.user.id)
+        .maybeSingle()
       if (cancelled) return
       setConsented(Boolean(data))
       setMarketingConsent(Boolean(data?.marketing_consent))
+      setWithdrawnAt(data?.withdrawal_requested_at ?? null)
       setLoading(false)
     }
     void loadConsent()
@@ -91,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ loading, session, consented, marketingConsent, signInWithProvider, completeConsent, updateMarketingConsent, signOut }}
+      value={{ loading, session, consented, marketingConsent, withdrawnAt, signInWithProvider, completeConsent, updateMarketingConsent, signOut }}
     >
       {children}
     </AuthContext.Provider>
@@ -106,10 +114,11 @@ export function useAuth(): AuthState {
 
 // PRD §5 분기 규칙 — 비로그인(또는 동의 전)이면 로그인으로 보내고, 끝나면 원래 목적지로 복귀.
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { loading, session, consented } = useAuth()
+  const { loading, session, consented, withdrawnAt } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
-  const needsLogin = !loading && (!session || !consented)
+  // 탈퇴 신청 계정은 서비스 차단 — /login에서 안내 문구를 보여준다
+  const needsLogin = !loading && (!session || !consented || Boolean(withdrawnAt))
 
   useEffect(() => {
     if (needsLogin) router.replace(`/login?next=${encodeURIComponent(pathname)}`)

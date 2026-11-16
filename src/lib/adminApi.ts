@@ -34,3 +34,22 @@ export async function adminCancelOrder(orderId: string, memo?: string): Promise<
   if (error) throw error
   return data as OrderRow
 }
+
+// 환불 — 신청을 열어 보면 검토중으로, 이체를 마치면 완료로 (PRD §7.1·7.5)
+export async function adminReviewRefund(orderId: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_review_refund', { p_order_id: orderId })
+  if (error) throw error
+  return data as OrderRow
+}
+
+export async function adminCompleteRefund(orderId: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_complete_refund', { p_order_id: orderId })
+  if (error) throw error
+  return data as OrderRow
+}
+
+export async function adminRejectRefund(orderId: string, memo: string): Promise<OrderRow> {
+  const { data, error } = await supabase.rpc('admin_reject_refund', { p_order_id: orderId, p_memo: memo })
+  if (error) throw error
+  return data as OrderRow
+}
