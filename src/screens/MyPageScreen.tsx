@@ -26,6 +26,7 @@ import {
   type InquiryRow,
   type InquiryType,
 } from '../lib/inquiriesApi'
+import { createReview, listMyReviews, type ReviewRow } from '../lib/reviewsApi'
 
 // PRD §6.6 마이 — 내 정보 · 결제 정보(환불 요청 포함) · 회원 탈퇴. 배송·리뷰·문의는 이후 단계.
 const PROVIDER_LABEL: Record<string, string> = { kakao: '카카오', google: '구글', email: '이메일' }
@@ -45,6 +46,13 @@ export function MyPageScreen() {
   const [iBody, setIBody] = useState('')
   const [iOrderId, setIOrderId] = useState<string>('')
 
+  // 리뷰 (PRD §6.6 — 결제 완료 주문당 1건)
+  const [reviews, setReviews] = useState<ReviewRow[]>([])
+  const [reviewTarget, setReviewTarget] = useState<OrderRow | null>(null)
+  const [rRating, setRRating] = useState(5)
+  const [rBody, setRBody] = useState('')
+  const [rNickname, setRNickname] = useState('')
+
   // 환불 폼
   const [reason, setReason] = useState('')
   const [bank, setBank] = useState('')
@@ -61,6 +69,9 @@ export function MyPageScreen() {
       .catch(() => setOrders([]))
     listMyInquiries()
       .then(setInquiries)
+      .catch(() => {})
+    listMyReviews()
+      .then(setReviews)
       .catch(() => {})
   }, [])
 
@@ -114,6 +125,39 @@ export function MyPageScreen() {
           ? '분석을 열람한 주문은 환불할 수 없어요.'
           : '환불 신청에 실패했어요. 잠시 후 다시 시도해 주세요.'
       setToast(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleCreateReview() {
+    if (!reviewTarget || submitting) return
+    if (rBody.trim().length < 10) {
+      setToast('리뷰 내용을 10자 이상 적어 주세요.')
+      return
+    }
+    if (!rNickname.trim()) {
+      setToast('공개될 닉네임을 입력해 주세요.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const row = await createReview({
+        orderId: reviewTarget.id,
+        rating: rRating,
+        body: rBody,
+        nickname: rNickname,
+      })
+      setReviews((prev) => [row, ...prev])
+      setReviewTarget(null)
+      setRBody('')
+      setToast('리뷰가 등록됐어요. 확인 후 메인에 소개될 수 있어요.')
+    } catch (e) {
+      setToast(
+        e instanceof Error && e.message.includes('ALREADY_REVIEWED')
+          ? '이미 리뷰를 작성한 주문이에요.'
+          : '리뷰 등록에 실패했어요. 잠시 후 다시 시도해 주세요.',
+      )
     } finally {
       setSubmitting(false)
     }
@@ -267,16 +311,54 @@ export function MyPageScreen() {
         ))}
       </div>
 
-      {/* 준비 중 메뉴 */}
+      {/* 리뷰 (PRD §6.6 — 결제 완료 주문당 1건, 승인 후 메인 노출) */}
       <div className="flex w-full max-w-[345px] flex-col gap-4 md:max-w-[480px]">
-        <div className="flex flex-col rounded-[4px] border border-white/50 bg-white/5 px-4">
-          {['리뷰 작성'].map((menu) => (
-            <div key={menu} className="flex items-center justify-between border-b border-white/10 py-4 last:border-b-0">
-              <span className="font-['Pretendard'] text-[14px] text-white/50">{menu}</span>
-              <span className="font-['Pretendard'] text-[12px] text-[#888]">준비 중</span>
-            </div>
-          ))}
-        </div>
+        <h2 className="font-['Mona12'] text-[16px] font-bold md:text-[20px]">리뷰</h2>
+        {(() => {
+          const reviewed = new Set(reviews.map((r) => r.order_id))
+          const eligible = (orders ?? []).filter((o) => o.payment_status === 'paid' && !reviewed.has(o.id))
+          if (eligible.length === 0 && reviews.length === 0)
+            return <p className="font-['Pretendard'] text-[14px] text-white/60">결제를 완료하면 리뷰를 쓸 수 있어요.</p>
+          return (
+            <>
+              {eligible.map((o) => (
+                <div
+                  key={o.id}
+                  className="flex items-center justify-between rounded-[4px] border border-white/50 bg-white/5 px-4 py-4"
+                >
+                  <span className="font-['Pretendard'] text-[14px] text-white/90">
+                    {PRODUCTS[o.product].name} · {subConcernLabel(o.sub_concern)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReviewTarget(o)
+                      setRRating(5)
+                    }}
+                    className="rounded-full border border-white/30 px-3 py-1.5 font-['Mona12'] text-[12px] text-white active:translate-y-[2px]"
+                  >
+                    리뷰 작성
+                  </button>
+                </div>
+              ))}
+              {reviews.map((r) => (
+                <div key={r.id} className="flex flex-col gap-2 rounded-[4px] border border-white/50 bg-white/5 px-4 py-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-['Mona12'] text-[14px] tracking-[2px] text-[#f31bc0]">
+                      {'★'.repeat(r.rating)}
+                      <span className="text-white/25">{'★'.repeat(5 - r.rating)}</span>
+                    </span>
+                    <span className="font-['Pretendard'] text-[12px] text-[#888]">
+                      {r.nickname} · {formatDate(r.created_at)}
+                      {r.visible ? ' · 메인 소개 중' : ''}
+                    </span>
+                  </div>
+                  <p className="font-['Pretendard'] text-[14px] leading-relaxed break-keep text-white/90">{r.body}</p>
+                </div>
+              ))}
+            </>
+          )
+        })()}
       </div>
 
       <div className="flex items-center gap-4">
@@ -338,6 +420,51 @@ export function MyPageScreen() {
               className="h-[44px] rounded-[4px] bg-[#f31bc0] font-['Pretendard'] text-[14px] text-white disabled:opacity-40"
             >
               환불 요청하기
+            </button>
+          </div>
+        </DetailModal>
+      )}
+
+      {/* 리뷰 작성 모달 — 별점 1~5 · 본문 10~300자 · 공개 닉네임 (§6.6) */}
+      {reviewTarget && (
+        <DetailModal title="리뷰 작성" onClose={() => setReviewTarget(null)}>
+          <div className="flex flex-col gap-3">
+            <p className="font-['Pretendard'] text-[13px] leading-relaxed break-keep text-[#8c8c8c]">
+              {PRODUCTS[reviewTarget.product].name} · {subConcernLabel(reviewTarget.sub_concern)} 주문의 리뷰예요. 확인
+              후 메인 화면에 닉네임과 함께 소개될 수 있어요.
+            </p>
+            <div className="flex justify-center gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setRRating(n)}
+                  aria-label={`별점 ${n}점`}
+                  className={`font-['Mona12'] text-[28px] ${n <= rRating ? 'text-[#f31bc0]' : 'text-[#ddd]'}`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+            <input
+              value={rNickname}
+              onChange={(e) => setRNickname(e.target.value.slice(0, 20))}
+              placeholder="공개될 닉네임"
+              className="h-[44px] rounded-[4px] border border-[#ddd] px-3 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
+            />
+            <textarea
+              value={rBody}
+              onChange={(e) => setRBody(e.target.value.slice(0, 300))}
+              placeholder="리뷰 내용 (10~300자)"
+              className="h-[120px] resize-none rounded-[4px] border border-[#ddd] px-3 py-2 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
+            />
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => void handleCreateReview()}
+              className="h-[44px] rounded-[4px] bg-[#f31bc0] font-['Pretendard'] text-[14px] text-white disabled:opacity-40"
+            >
+              리뷰 등록하기
             </button>
           </div>
         </DetailModal>

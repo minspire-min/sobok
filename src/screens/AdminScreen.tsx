@@ -17,13 +17,16 @@ import {
   adminReturnComplete,
   adminReturnInTransit,
   adminReviewRefund,
+  adminListReviews,
   adminSetMemo,
+  adminSetReviewVisible,
   adminSetShippingTalismans,
   adminShip,
   adminSignIn,
   checkIsAdmin,
 } from '../lib/adminApi'
 import { adminAnswerInquiry, adminListInquiries, INQUIRY_STATUS_LABEL, type InquiryRow } from '../lib/inquiriesApi'
+import type { ReviewRow } from '../lib/reviewsApi'
 import { notify } from '../lib/notifyApi'
 import { subConcernLabel } from '../lib/concerns'
 import { computeFiveElementCounts } from '../lib/elementScore'
@@ -34,7 +37,7 @@ import { formatDate, PAYMENT_STATUS_LABEL, SHIPPING_STATUS_LABEL, type OrderRow,
 import { formatWon, PRODUCTS } from '../lib/products'
 
 // PRD §10.2 결제 관리 — 1차: 입금 확인 요청 처리. 라이트 테마(어드민은 픽셀 스타일 제외, §9.5)
-type Tab = 'awaiting' | 'refund' | 'shipping' | 'inquiry' | 'all'
+type Tab = 'awaiting' | 'refund' | 'shipping' | 'inquiry' | 'review' | 'all'
 
 export function AdminScreen() {
   const { loading, session, signOut } = useAuth()
@@ -44,6 +47,7 @@ export function AdminScreen() {
   const [orders, setOrders] = useState<OrderRow[] | null>(null)
   const [inquiries, setInquiries] = useState<InquiryRow[]>([])
   const [shipments, setShipments] = useState<Record<string, ShipmentRow>>({})
+  const [reviews, setReviews] = useState<ReviewRow[]>([])
   const [answeringId, setAnsweringId] = useState<string | null>(null)
   const [answerText, setAnswerText] = useState('')
   // 주문 상세 (§10.2 사주 확인 상세)
@@ -66,6 +70,9 @@ export function AdminScreen() {
     adminListShipments()
       .then(setShipments)
       .catch(() => setShipments({}))
+    adminListReviews()
+      .then(setReviews)
+      .catch(() => setReviews([]))
   }, [])
 
   useEffect(() => {
@@ -339,6 +346,7 @@ export function AdminScreen() {
               ['refund', '환불'],
               ['shipping', '배송·제작'],
               ['inquiry', '문의'],
+              ['review', '리뷰'],
               ['all', '전체 주문'],
             ] as Array<[Tab, string]>
           ).map(([key, label]) => (
@@ -602,7 +610,46 @@ export function AdminScreen() {
           </div>
         )}
 
-        {tab !== 'inquiry' && tab !== 'shipping' && (
+        {/* 리뷰 탭 — 승인(노출)한 리뷰만 메인에 보임 (4-2, §10.2) */}
+        {tab === 'review' && (
+          <div className="flex flex-col gap-3">
+            {reviews.length === 0 && (
+              <div className="rounded-lg border border-[#e5e5e5] bg-white p-6 text-center text-[13px] text-[#888]">작성된 리뷰가 없어요.</div>
+            )}
+            {reviews.map((r) => (
+              <div key={r.id} className="flex flex-col gap-2 rounded-lg border border-[#e5e5e5] bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] text-[#888]">
+                    <span className="mr-2 text-[#f3b526]">{'★'.repeat(r.rating)}</span>
+                    {r.nickname} · {formatDate(r.created_at)}
+                  </span>
+                  <span className={`rounded-full px-2 py-[2px] text-[11px] text-white ${r.visible ? 'bg-[#17c666]' : 'bg-[#888]'}`}>
+                    {r.visible ? '메인 노출 중' : '비노출'}
+                  </span>
+                </div>
+                <p className="text-[14px] leading-relaxed break-keep">{r.body}</p>
+                <button
+                  type="button"
+                  disabled={busyId === r.id}
+                  onClick={() => {
+                    setBusyId(r.id)
+                    adminSetReviewVisible(r.id, !r.visible)
+                      .then((updated) => setReviews((prev) => prev.map((x) => (x.id === updated.id ? updated : x))))
+                      .catch(() => window.alert('처리에 실패했어요. 새로고침 후 다시 시도해 주세요.'))
+                      .finally(() => setBusyId(null))
+                  }}
+                  className={`self-start rounded-md px-4 py-2 text-[12px] disabled:opacity-40 ${
+                    r.visible ? 'border border-[#ddd]' : 'bg-[#101010] text-white'
+                  }`}
+                >
+                  {r.visible ? '노출 내리기' : '메인에 노출'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab !== 'inquiry' && tab !== 'shipping' && tab !== 'review' && (
         <div className="overflow-x-auto rounded-lg border border-[#e5e5e5] bg-white">
           <table className="w-full min-w-[820px] text-left text-[13px]">
             <thead className="border-b border-[#eee] text-[#888]">

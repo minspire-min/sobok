@@ -1,9 +1,10 @@
 import Link from 'next/link'
 const heart = '/assets/heart.png'
 import { PixelButton } from '../components/PixelButton'
+import { HomeReviews } from '../components/HomeReviews'
 
-// PRD §6.2 메인 1차 — 소개 · 이용 방법 · 무료 안내 · 상품 3종 · 고민 진열 · FAQ · CTA.
-// 상태별 메인(구매함 표시 등)과 리뷰 섹션은 단계 2·4에서 추가한다.
+// PRD §6.2 메인 — 소개 · 이용 방법 · 무료 안내 · 상품 3종 · 고민 진열 · 리뷰 · FAQ · CTA.
+// 상태별 메인(구매함 표시 등)은 이후 단계에서 추가한다.
 
 const STEPS = [
   { no: '1', title: '사주 등록', desc: '생년월일시를 입력하면 사주를 풀어 드려요' },
@@ -113,6 +114,9 @@ export function HomeScreen() {
           ))}
         </div>
       </section>
+
+      {/* 리뷰 — 공개 승인분 최신순, 0건이면 숨김 (§6.2 #6) */}
+      <HomeReviews />
 
       {/* FAQ */}
       <section className="flex w-full max-w-[361px] flex-col gap-4">

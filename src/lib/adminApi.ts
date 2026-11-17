@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { OrderRow, ShipmentRow } from './ordersApi'
+import type { ReviewRow } from './reviewsApi'
 
 // 어드민 — 관리자 판별은 서버(is_admin RPC, 이메일 허용 목록). 상태 변경도 전부 서버 RPC.
 export async function adminSignIn(email: string, password: string): Promise<void> {
@@ -132,6 +133,23 @@ export async function adminRejectClaim(orderId: string, memo: string): Promise<O
   const { data, error } = await supabase.rpc('admin_reject_claim', { p_order_id: orderId, p_memo: memo })
   if (error) throw error
   return data as OrderRow
+}
+
+// 리뷰 노출 설정 (4-2) — 승인된 리뷰만 메인에 보임
+export async function adminListReviews(): Promise<ReviewRow[]> {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(300)
+  if (error) throw error
+  return (data ?? []) as ReviewRow[]
+}
+
+export async function adminSetReviewVisible(reviewId: string, visible: boolean): Promise<ReviewRow> {
+  const { data, error } = await supabase.rpc('admin_set_review_visible', { p_review_id: reviewId, p_visible: visible })
+  if (error) throw error
+  return data as ReviewRow
 }
 
 export async function adminSetMemo(orderId: string, memo: string): Promise<OrderRow> {
