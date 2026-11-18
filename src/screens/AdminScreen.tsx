@@ -28,7 +28,7 @@ import {
 import { adminAnswerInquiry, adminListInquiries, INQUIRY_STATUS_LABEL, type InquiryRow } from '../lib/inquiriesApi'
 import type { ReviewRow } from '../lib/reviewsApi'
 import { notify } from '../lib/notifyApi'
-import { subConcernLabel } from '../lib/concerns'
+import { subConcernLabel, TOP_CONCERNS } from '../lib/concerns'
 import { computeFiveElementCounts } from '../lib/elementScore'
 import { ELEMENT_ORDER } from '../lib/elements'
 import { profileToFormInput } from '../lib/profilesApi'
@@ -37,7 +37,7 @@ import { formatDate, PAYMENT_STATUS_LABEL, SHIPPING_STATUS_LABEL, type OrderRow,
 import { formatWon, PRODUCTS } from '../lib/products'
 
 // PRD §10.2 결제 관리 — 1차: 입금 확인 요청 처리. 라이트 테마(어드민은 픽셀 스타일 제외, §9.5)
-type Tab = 'awaiting' | 'refund' | 'shipping' | 'inquiry' | 'review' | 'all'
+type Tab = 'awaiting' | 'refund' | 'shipping' | 'inquiry' | 'review' | 'stats' | 'all'
 
 export function AdminScreen() {
   const { loading, session, signOut } = useAuth()
@@ -55,6 +55,7 @@ export function AdminScreen() {
   const [extras, setExtras] = useState<Awaited<ReturnType<typeof adminGetOrderExtras>> | null>(null)
   const [memoText, setMemoText] = useState('')
   const [tab, setTab] = useState<Tab>('awaiting')
+  const [statsPeriod, setStatsPeriod] = useState<'7' | '30' | 'all'>('30')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loginError, setLoginError] = useState<string | null>(null)
@@ -117,13 +118,15 @@ export function AdminScreen() {
     await runAction(o.id, () => adminCancelOrder(o.id, memo))
   }
 
-  async function runAction(id: string, fn: () => Promise<OrderRow>) {
+  async function runAction(id: string, fn: () => Promise<OrderRow>): Promise<OrderRow | null> {
     setBusyId(id)
     try {
       const updated = await fn()
       setOrders((prev) => (prev ?? []).map((x) => (x.id === updated.id ? updated : x)))
+      return updated
     } catch {
       window.alert('처리에 실패했어요. 새로고침 후 다시 시도해 주세요.')
+      return null
     } finally {
       setBusyId(null)
     }
@@ -154,6 +157,29 @@ export function AdminScreen() {
       total: list.length,
     }
   }, [orders, inquiries])
+
+  // 매출 통계 (4-5, §10) — 결제액·환불 차감 순매출·상품별/고민별 비중 (결제 확인일 기준)
+  const salesStats = useMemo(() => {
+    const list = orders ?? []
+    const since = statsPeriod === 'all' ? 0 : Date.now() - Number(statsPeriod) * 24 * 60 * 60 * 1000
+    const paidList = list.filter((o) => o.paid_at && new Date(o.paid_at).getTime() >= since)
+    const gross = paidList.reduce((s, o) => s + o.amount, 0)
+    const refundList = list.filter(
+      (o) => o.payment_status === 'refunded' && o.refunded_at && new Date(o.refunded_at).getTime() >= since,
+    )
+    const refundSum = refundList.reduce((s, o) => s + (o.refund_amount ?? o.amount), 0)
+    const byProduct = [1, 2, 3].map((p) => {
+      const rows = paidList.filter((o) => o.product === p)
+      return { product: p, count: rows.length, amount: rows.reduce((s, o) => s + o.amount, 0) }
+    })
+    const byConcern = TOP_CONCERNS.map((t) => {
+      const rows = paidList.filter((o) => o.top_concern === t.key)
+      return { label: t.label, count: rows.length, amount: rows.reduce((s, o) => s + o.amount, 0) }
+    })
+      .filter((x) => x.count > 0)
+      .sort((a, b) => b.amount - a.amount)
+    return { gross, refundSum, net: gross - refundSum, paidCount: paidList.length, refundCount: refundList.length, byProduct, byConcern }
+  }, [orders, statsPeriod])
 
   function openDetail(o: OrderRow) {
     setDetailOrder(o)
@@ -204,7 +230,8 @@ export function AdminScreen() {
     if (!carrier) return
     const tracking = window.prompt('송장번호를 입력하세요.')
     if (!tracking) return
-    await runAction(o.id, () => adminShip(o.id, carrier, tracking))
+    const updated = await runAction(o.id, () => adminShip(o.id, carrier, tracking))
+    if (updated) void notify('shipped', o.id) // 발송 알림 (4-4)
     adminListShipments().then(setShipments).catch(() => {})
   }
 
@@ -347,6 +374,7 @@ export function AdminScreen() {
               ['shipping', '배송·제작'],
               ['inquiry', '문의'],
               ['review', '리뷰'],
+              ['stats', '매출 통계'],
               ['all', '전체 주문'],
             ] as Array<[Tab, string]>
           ).map(([key, label]) => (
@@ -657,7 +685,94 @@ export function AdminScreen() {
           </div>
         )}
 
-        {tab !== 'inquiry' && tab !== 'shipping' && tab !== 'review' && (
+        {/* 매출 통계 탭 (4-5) — 어드민 목록 기준 집계, 최근 300건 한도 */}
+        {tab === 'stats' && (
+          <div className="flex flex-col gap-4">
+            <div className="flex gap-2">
+              {(
+                [
+                  ['7', '최근 7일'],
+                  ['30', '최근 30일'],
+                  ['all', '전체'],
+                ] as Array<['7' | '30' | 'all', string]>
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatsPeriod(key)}
+                  className={`rounded-md px-4 py-2 text-[13px] ${statsPeriod === key ? 'bg-[#101010] text-white' : 'border border-[#ddd] bg-white'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {[
+                ['결제액', salesStats.gross, `${salesStats.paidCount}건`, '#101010'],
+                ['환불액', salesStats.refundSum, `${salesStats.refundCount}건`, '#d61f34'],
+                ['순매출 (환불 차감)', salesStats.net, '', '#17c666'],
+              ].map(([label, value, sub, color]) => (
+                <div key={label as string} className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+                  <p className="text-[12px] text-[#888]">
+                    {label} {sub ? <span className="ml-1">· {sub}</span> : null}
+                  </p>
+                  <p className="text-[24px] font-bold" style={{ color: color as string }}>
+                    {formatWon(value as number)}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+              <p className="mb-3 text-[13px] font-bold">상품별 비중</p>
+              <div className="flex flex-col gap-2">
+                {salesStats.byProduct.map((row) => (
+                  <div key={row.product} className="flex items-center gap-3 text-[13px]">
+                    <span className="w-[150px] shrink-0">{PRODUCTS[row.product].name}</span>
+                    <div className="h-3 flex-1 rounded-full bg-[#f0f0f0]">
+                      <div
+                        className="h-3 rounded-full bg-[#f31bc0]"
+                        style={{ width: `${salesStats.gross ? Math.round((row.amount / salesStats.gross) * 100) : 0}%` }}
+                      />
+                    </div>
+                    <span className="w-[140px] shrink-0 text-right text-[#555]">
+                      {row.count}건 · {formatWon(row.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-[#e5e5e5] bg-white p-4">
+              <p className="mb-3 text-[13px] font-bold">고민(상위)별 비중</p>
+              {salesStats.byConcern.length === 0 && <p className="text-[13px] text-[#888]">기간 내 결제가 없어요.</p>}
+              <div className="flex flex-col gap-2">
+                {salesStats.byConcern.map((row) => (
+                  <div key={row.label} className="flex items-center gap-3 text-[13px]">
+                    <span className="w-[150px] shrink-0">{row.label}</span>
+                    <div className="h-3 flex-1 rounded-full bg-[#f0f0f0]">
+                      <div
+                        className="h-3 rounded-full bg-[#f3b526]"
+                        style={{ width: `${salesStats.gross ? Math.round((row.amount / salesStats.gross) * 100) : 0}%` }}
+                      />
+                    </div>
+                    <span className="w-[140px] shrink-0 text-right text-[#555]">
+                      {row.count}건 · {formatWon(row.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-[12px] text-[#888]">
+              ※ 결제 확인일(paid_at) 기준 집계이며, 부가세 별도 금액이에요. 목록 한도(최근 300건)를 넘으면 오래된 주문은
+              집계에서 빠져요.
+            </p>
+          </div>
+        )}
+
+        {tab !== 'inquiry' && tab !== 'shipping' && tab !== 'review' && tab !== 'stats' && (
         <div className="overflow-x-auto rounded-lg border border-[#e5e5e5] bg-white">
           <table className="w-full min-w-[820px] text-left text-[13px]">
             <thead className="border-b border-[#eee] text-[#888]">

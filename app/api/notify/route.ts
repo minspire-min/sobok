@@ -7,7 +7,7 @@ import { formatWon } from '@/lib/products'
 // 이메일 알림 발송 (2-15, 결정 #8) — 어드민 처리 직후 호출된다.
 // RESEND_API_KEY가 없으면 보내지 않고 email_outbox에 'skipped'로 기록만 한다(임의 처리 시트 #8).
 // 호출자 검증: Authorization의 Supabase 토큰으로 is_admin()을 서버에서 확인 — 키는 서버에만 있다.
-type NotifyType = 'paid' | 'refunded' | 'inquiry_answered'
+type NotifyType = 'paid' | 'refunded' | 'inquiry_answered' | 'shipped'
 
 const SITE_URL = 'https://soboksobok-saju.vercel.app'
 
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
   const { type, refId } = (await request.json()) as { type: NotifyType; refId: string }
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!['paid', 'refunded', 'inquiry_answered'].includes(type) || !UUID_RE.test(refId ?? '')) {
+  if (!['paid', 'refunded', 'inquiry_answered', 'shipped'].includes(type) || !UUID_RE.test(refId ?? '')) {
     return NextResponse.json({ error: 'BAD_REQUEST' }, { status: 400 })
   }
 
@@ -33,7 +33,14 @@ export async function POST(request: Request) {
   let toEmail: string | null = null
   let subject = ''
   let body = ''
-  if (type === 'paid' || type === 'refunded') {
+  if (type === 'shipped') {
+    const { data: order } = await db.from('orders').select('user_email, sub_concern, id').eq('id', refId).maybeSingle()
+    if (!order) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 })
+    const { data: shipment } = await db.from('shipments').select('carrier, tracking_no').eq('order_id', refId).maybeSingle()
+    toEmail = order.user_email
+    subject = '[소福소福] 부적이 발송됐어요'
+    body = `'${subConcernLabel(order.sub_concern)}' 주문의 부적이 발송됐어요.\n${shipment ? `${shipment.carrier} ${shipment.tracking_no}` : ''}\n\n배송 현황은 마이 > 결제 정보의 배송에서 확인할 수 있어요.\n${SITE_URL}/my`
+  } else if (type === 'paid' || type === 'refunded') {
     const { data: order } = await db.from('orders').select('user_email, sub_concern, amount, profile_id, id').eq('id', refId).maybeSingle()
     if (!order) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 })
     toEmail = order.user_email
