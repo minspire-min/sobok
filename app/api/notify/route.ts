@@ -9,7 +9,7 @@ import { formatWon } from '@/lib/products'
 // 호출자 검증: Authorization의 Supabase 토큰으로 is_admin()을 서버에서 확인 — 키는 서버에만 있다.
 type NotifyType = 'paid' | 'refunded' | 'inquiry_answered' | 'shipped'
 
-const SITE_URL = 'https://soboksobok-saju.vercel.app'
+const SITE_URL = 'https://www.sobok-saju.com'
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization')

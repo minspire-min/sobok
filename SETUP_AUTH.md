@@ -42,10 +42,11 @@
 로그인이 끝난 뒤 사용자를 어디로 돌려보낼지 Supabase에 알려줘야 합니다.
 
 1. Supabase 대시보드 → Authentication → **URL Configuration**
-2. Site URL: `https://soboksobok-saju.vercel.app` 입력
-3. Redirect URLs에 아래 두 줄 추가:
+2. Site URL: `https://www.sobok-saju.com` 입력
+3. Redirect URLs에 아래 세 줄 추가:
    - `http://localhost:3000/login` (개발용)
-   - `https://soboksobok-saju.vercel.app/login` (운영)
+   - `https://www.sobok-saju.com/login` (운영)
+   - `https://soboksobok-saju.vercel.app/login` (Vercel 기본 주소 — 보조)
 
 ## 4. 확인 방법
 
