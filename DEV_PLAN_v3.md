@@ -159,7 +159,7 @@ PRD가 정한 순서입니다. **디지털 상품(결제1)을 먼저 열고, 실
 - 서비스 이름 '소福소福' 적용
 - **Next.js(App Router) 전환 완료(11/15)** — 전체 화면·로그인·에셋 이전, 빌드와 화면 테스트 통과. 이제 Vercel이 저장소만 연결하면 바로 배포되는 상태
 
-- **운영 주소: https://www.sobok-saju.com** (2026-11-19 도메인 확정 — Vercel 도메인 연결·DNS 설정은 시트 #28). Vercel 기본 주소 https://soboksobok-saju.vercel.app 는 보조로 유지. main에 푸시할 때마다 자동 배포
+- **운영 주소: https://www.sobok-saju.com** (2026-11-19 연결 완료 — Vercel에서 도메인 구매, DNS 자동 설정, sobok-saju.com은 www로 리다이렉트). Vercel 기본 주소 https://soboksobok-saju.vercel.app 는 보조로 유지. main에 푸시할 때마다 자동 배포
 
 **단계 1을 닫기 위해 남은 것 (전부 지민 몫)**
 1. Supabase 로그인 허용 주소 등록 (`SETUP_AUTH.md` 3번 — 운영 주소가 정해졌으니 바로 가능, ~5분)
@@ -246,7 +246,7 @@ PRD가 정한 순서입니다. **디지털 상품(결제1)을 먼저 열고, 실
 - [ ] 고객 문의 채널 (이메일 또는 카카오톡 채널)
 - [ ] **Vercel 요금제 확인**: 판매 사이트는 상업적 사용이라 무료 요금제 약관에 걸릴 가능성(§17.6 미확실) — 약관 원문 확인 후 필요하면 Pro(월 $20) 결정
 - [x] ~~GitHub 저장소를 Vercel 프로젝트에 연결~~ → 완료 (11/15, 프로젝트 `soboksobok-saju`)
-- [ ] 도메인 연결: **www.sobok-saju.com** (11/19 확정) — Vercel 프로젝트에 도메인 추가 + 구입처 DNS 설정 + Supabase Auth Site URL 변경 (시트 #28)
+- [x] ~~도메인 연결: **www.sobok-saju.com**~~ → 완료 (11/19, Vercel에서 구매·DNS 자동 설정·인증 확인, apex→www 리다이렉트). Supabase Auth Site URL 변경만 로그인 열 때(#11) 함께
 - [ ] 도메인을 Vercel에 연결한 뒤 카카오·구글 로그인 리다이렉트 주소 갱신
 
 ### 약관·정책
