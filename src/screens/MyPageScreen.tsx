@@ -123,7 +123,9 @@ export function MyPageScreen() {
       const message =
         e instanceof Error && e.message.includes('ALREADY_VIEWED')
           ? '분석을 열람한 주문은 환불할 수 없어요.'
-          : '환불 신청에 실패했어요. 잠시 후 다시 시도해 주세요.'
+          : e instanceof Error && e.message.includes('USE_RETURN_FLOW')
+            ? '배송이 시작된 주문은 배송 화면의 교환·반품으로 신청해 주세요.'
+            : '환불 신청에 실패했어요. 잠시 후 다시 시도해 주세요.'
       setToast(message)
     } finally {
       setSubmitting(false)
@@ -256,13 +258,15 @@ export function MyPageScreen() {
                       배송 {o.shipping_status ? `(${SHIPPING_STATUS_LABEL[o.shipping_status]})` : ''}
                     </Link>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setRefundTarget(o)}
-                    className="font-['Pretendard'] text-[13px] text-white/60 underline underline-offset-2"
-                  >
-                    환불 요청
-                  </button>
+                  {(o.product === 1 || o.shipping_status === 'awaiting') && (
+                    <button
+                      type="button"
+                      onClick={() => setRefundTarget(o)}
+                      className="font-['Pretendard'] text-[13px] text-white/60 underline underline-offset-2"
+                    >
+                      환불 요청
+                    </button>
+                  )}
                 </>
               )}
               {(o.payment_status === 'refund_requested' || o.payment_status === 'refund_reviewing') && (

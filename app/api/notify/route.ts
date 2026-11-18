@@ -24,6 +24,10 @@ export async function POST(request: Request) {
   if (!isAdmin) return NextResponse.json({ error: 'ADMIN_ONLY' }, { status: 403 })
 
   const { type, refId } = (await request.json()) as { type: NotifyType; refId: string }
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!['paid', 'refunded', 'inquiry_answered'].includes(type) || !UUID_RE.test(refId ?? '')) {
+    return NextResponse.json({ error: 'BAD_REQUEST' }, { status: 400 })
+  }
 
   // 수신자·내용 구성 (수신 이메일은 주문·문의에 저장된 값 — 관리자 RLS로 조회)
   let toEmail: string | null = null

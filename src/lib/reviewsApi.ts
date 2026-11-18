@@ -37,14 +37,9 @@ export async function listMyReviews(): Promise<ReviewRow[]> {
   return (data ?? []) as ReviewRow[]
 }
 
-// 메인 리뷰 섹션 — 비로그인 포함 누구나, 노출 승인분만 (RLS visible 정책)
+// 메인 리뷰 섹션 — 비로그인 포함 누구나. 안전한 컬럼만 돌려주는 서버 함수 사용 (시트 #23)
 export async function listPublicReviews(limit = 10): Promise<ReviewRow[]> {
-  const { data, error } = await supabase
-    .from('reviews')
-    .select('id, rating, body, nickname, created_at')
-    .eq('visible', true)
-    .order('created_at', { ascending: false })
-    .limit(limit)
+  const { data, error } = await supabase.rpc('list_public_reviews', { p_limit: limit })
   if (error) throw error
   return (data ?? []) as ReviewRow[]
 }

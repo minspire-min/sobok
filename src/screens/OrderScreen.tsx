@@ -185,7 +185,7 @@ export function OrderScreen({ profileId }: Props) {
     return { input, computation, element, basis }
   }
 
-  // 결제 완료 주문 → 분석 5페이지 (1회 생성 저장, 열람 기록 — 이후 환불 불가 결정 #4)
+  // 결제 완료 주문 → 분석 5페이지 (1회 생성 저장 — 열람 기록은 동의 버튼에서만, 시트 #21)
   async function goReading(order: OrderRow) {
     try {
       const { input, computation, element, basis } = computeRecommendation(order)
@@ -198,13 +198,24 @@ export function OrderScreen({ profileId }: Props) {
         basis,
       })
       const saved = await saveReading(order.id, pages)
-      await markReadingViewed(order.id)
       setReading(saved)
       setReadingPage(0)
       setActiveOrder(order)
       setStep('reading')
     } catch {
       setToast('분석을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+    }
+  }
+
+  // 열람 동의 — 환불 제한 고지 후에만 열람 기록(결정 #4·#23, 청약철회 제한 사전 동의)
+  async function confirmReadingView(order: OrderRow) {
+    try {
+      await markReadingViewed(order.id)
+      const updated = { ...order, reading_first_viewed_at: new Date().toISOString() }
+      setActiveOrder(updated)
+      setOrders((prev) => (prev ?? []).map((x) => (x.id === order.id ? updated : x)))
+    } catch {
+      setToast('잠시 후 다시 시도해 주세요.')
     }
   }
 
@@ -465,8 +476,34 @@ export function OrderScreen({ profileId }: Props) {
           </>
         )}
 
+        {/* 5-0) 열람 동의 게이트 — 보기 전에 환불 제한 고지 (시트 #21) */}
+        {step === 'reading' && activeOrder && reading && !activeOrder.reading_first_viewed_at && (
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col items-center gap-2">
+              <p className="font-['Mona12'] text-[20px] font-bold tracking-[1.28px]">고민별 사주 분석</p>
+            </div>
+            <div className="flex flex-col gap-3 rounded-[4px] border border-white/50 bg-white/5 px-5 py-6">
+              <p className="font-['Pretendard'] text-[15px] leading-relaxed break-keep text-white/90">
+                분석은 디지털 콘텐츠라 <span className="font-bold text-white">열람하면 환불이 제한돼요.</span>
+              </p>
+              <p className="font-['Pretendard'] text-[13px] leading-relaxed break-keep text-white/70">
+                · 사주 분석+이미지 부적(결제1) 금액은 열람 후 환불되지 않아요.
+                <br />· 배송 상품을 반품할 때도 분석 금액을 뺀 차액이 환불돼요.
+              </p>
+            </div>
+            <PixelButton onClick={() => void confirmReadingView(activeOrder)}>동의하고 분석 보기</PixelButton>
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              className="font-['Pretendard'] text-[13px] text-[#888] underline underline-offset-2"
+            >
+              나중에 볼게요
+            </button>
+          </div>
+        )}
+
         {/* 5) 분석 5페이지 — 가로 스와이프 + 페이지 점, 마지막에 [부적 추천 보기] (§6.5, 2-9) */}
-        {step === 'reading' && activeOrder && reading && (
+        {step === 'reading' && activeOrder && reading && Boolean(activeOrder.reading_first_viewed_at) && (
           <div className="flex flex-col gap-5">
             <div className="flex flex-col items-center gap-2">
               <p className="font-['Mona12'] text-[20px] font-bold tracking-[1.28px]">고민별 사주 분석</p>
@@ -596,7 +633,7 @@ export function OrderScreen({ profileId }: Props) {
 
             <button
               type="button"
-              onClick={() => activeOrder && void goReading(activeOrder)}
+              onClick={() => (reading ? setStep('reading') : activeOrder && void goReading(activeOrder))}
               className="font-['Pretendard'] text-[13px] text-[#888] underline underline-offset-2"
             >
               분석 다시 보기

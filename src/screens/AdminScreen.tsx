@@ -365,7 +365,15 @@ export function AdminScreen() {
         {tab === 'shipping' && (
           <div className="flex flex-col gap-3">
             {(() => {
-              const list = (orders ?? []).filter((o) => o.product > 1 && o.payment_status === 'paid' && o.shipping_status)
+              // 반품·교환 건은 결제 상태가 환불 쪽으로 바뀌어도 이 탭에 남아야 함 (시트 #19)
+              const list = (orders ?? []).filter(
+                (o) =>
+                  o.product > 1 &&
+                  o.shipping_status &&
+                  (o.payment_status === 'paid' ||
+                    o.shipping_status.startsWith('return') ||
+                    o.shipping_status.startsWith('exchange')),
+              )
               const rank = {
                 exchange_requested: 0,
                 return_requested: 0,
@@ -717,7 +725,13 @@ export function AdminScreen() {
                         </button>
                       </div>
                     )}
-                    {o.payment_status === 'refund_requested' && (
+                    {/* 반품 건은 회수 확인 없이 환불되지 않도록 범용 환불 버튼 차단 (시트 #19) */}
+                    {['refund_requested', 'refund_reviewing'].includes(o.payment_status) &&
+                      ['return_requested', 'return_shipping'].includes(o.shipping_status ?? '') && (
+                        <span className="text-[12px] text-[#888]">반품 건 — 배송·제작 탭에서 처리</span>
+                      )}
+                    {o.payment_status === 'refund_requested' &&
+                      !['return_requested', 'return_shipping'].includes(o.shipping_status ?? '') && (
                       <button
                         type="button"
                         disabled={busyId === o.id}
@@ -727,7 +741,8 @@ export function AdminScreen() {
                         검토 시작
                       </button>
                     )}
-                    {o.payment_status === 'refund_reviewing' && (
+                    {o.payment_status === 'refund_reviewing' &&
+                      !['return_requested', 'return_shipping'].includes(o.shipping_status ?? '') && (
                       <div className="flex flex-col gap-1">
                         <p className="text-[12px] text-[#555]">
                           {o.refund_account?.bank} {o.refund_account?.account} ({o.refund_account?.holder})
