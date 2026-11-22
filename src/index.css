@@ -165,3 +165,23 @@ body {
     @apply font-sans;
   }
 }
+/* ───── 홈 랜딩 모션 — 스프링 곡선·등장·부유 (2026-11-22 리디자인) ───── */
+@keyframes sb-fade-up {
+  from { opacity: 0; transform: translateY(2rem); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+@keyframes sb-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+.sb-reveal { opacity: 0; }
+.sb-reveal.sb-in {
+  animation: sb-fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--d, 0) * 90ms);
+}
+.sb-ease { transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+.sb-float { animation: sb-float 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .sb-reveal { opacity: 1; }
+  .sb-reveal.sb-in, .sb-float { animation: none; }
+}
