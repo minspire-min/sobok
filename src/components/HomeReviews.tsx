@@ -17,7 +17,7 @@ export function HomeReviews() {
 
   return (
     <section className="w-full max-w-[400px]">
-      <h2 className="font-['Mona12'] text-[18px] font-bold tracking-[1.2px] md:text-[20px]">먼저 받아 본 이야기</h2>
+      <h2 className="font-['Pretendard'] text-[18px] font-bold md:text-[20px]">먼저 받아 본 이야기</h2>
       <div className="mt-6 flex flex-col gap-4">
         {reviews.map((r, i) => (
           <div
@@ -25,7 +25,7 @@ export function HomeReviews() {
             className={`rounded-[1.75rem] bg-white/5 px-5 py-6 ring-1 ring-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] ${i % 2 === 1 ? 'ml-4' : 'mr-4'}`}
           >
             <div className="flex items-center justify-between">
-              <span className="font-['Mona12'] text-[14px] tracking-[2px] text-[#f31bc0]">
+              <span className="font-['Pretendard'] text-[14px] tracking-[2px] text-[#f31bc0]">
                 {'★'.repeat(r.rating)}
                 <span className="text-white/20">{'★'.repeat(5 - r.rating)}</span>
               </span>

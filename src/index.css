@@ -9,34 +9,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@font-face {
-  font-family: 'Mona10';
-  src: url('/fonts/Mona10.otf') format('opentype');
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Mona10';
-  src: url('/fonts/Mona10-Bold.otf') format('opentype');
-  font-weight: 700;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Mona12';
-  src: url('/fonts/Mona12.otf') format('opentype');
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Mona12';
-  src: url('/fonts/Mona12-Bold.otf') format('opentype');
-  font-weight: 700;
-  font-display: swap;
-}
+/* 탈픽셀(2026-11-23): Mona10/12 픽셀 폰트 제거 — 본문·제목 모두 Pretendard */
 
 :root {
-  --font-pixel: 'Mona12', system-ui, sans-serif;
-  --font-pixel-accent: 'Mona10', system-ui, sans-serif;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);

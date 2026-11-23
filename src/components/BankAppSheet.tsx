@@ -58,7 +58,7 @@ export function BankAppSheet({ account, onCopied, onClose }: Props) {
               key={b.key}
               type="button"
               onClick={() => void openBank(b)}
-              className="rounded-[4px] border border-[#e5e5e5] px-1 py-3 font-['Pretendard'] text-[13px] text-[#101010] active:bg-[#f5f5f5]"
+              className="rounded-[12px] border border-[#e5e5e5] px-1 py-3 font-['Pretendard'] text-[13px] text-[#101010] active:bg-[#f5f5f5]"
             >
               {b.label}
             </button>

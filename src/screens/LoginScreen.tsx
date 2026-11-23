@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-const heart = '/assets/heart.png'
+import { HeartMark } from '../components/HeartMark'
 import { DetailModal } from '../components/DetailModal'
 import { PixelButton } from '../components/PixelButton'
 import { PixelCheckbox } from '../components/PixelCheckbox'
@@ -47,8 +47,8 @@ export function LoginScreen() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-12 bg-[#1a1a1a] px-4 py-[60px]">
       <div className="flex flex-col items-center gap-4">
-        <img src={heart} alt="" className="h-16 w-[69px] object-cover" />
-        <h1 className="font-['Mona12'] text-[32px] font-bold tracking-[1.28px] text-white md:text-[40px]">소福소福</h1>
+        <HeartMark className="h-14 w-14" />
+        <h1 className="font-['Pretendard'] text-[32px] font-bold text-white md:text-[40px]">소福소福</h1>
         <p className="font-['Pretendard'] text-[14px] text-[#b1b1b1]">
           {session ? '시작하기 전에 동의가 필요해요' : '간편하게 로그인하고 내 사주를 확인해요'}
         </p>
@@ -56,7 +56,7 @@ export function LoginScreen() {
 
       {session && withdrawnAt ? (
         // §17.5 — 탈퇴 후 7일간 재가입 불가
-        <div className="flex w-full max-w-[361px] flex-col gap-4 rounded-[4px] border border-white/50 bg-white/5 px-4 py-5">
+        <div className="flex w-full max-w-[361px] flex-col gap-4 rounded-[12px] border border-white/15 bg-white/5 px-4 py-5">
           <p className="font-['Pretendard'] text-[14px] leading-relaxed break-keep text-white/85">
             탈퇴 처리 중인 계정이에요. 개인정보는 신청일로부터 7일 안에 삭제되며, 그동안은 다시 가입할 수 없어요.
           </p>
@@ -88,7 +88,7 @@ export function LoginScreen() {
         </div>
       ) : (
         <div className="flex w-full max-w-[361px] flex-col gap-6">
-          <div className="flex flex-col gap-4 rounded-[4px] border border-white/50 bg-white/5 px-4 py-5">
+          <div className="flex flex-col gap-4 rounded-[12px] border border-white/15 bg-white/5 px-4 py-5">
             <PixelCheckbox
               id="consent-terms"
               label="(필수) 이용약관에 동의합니다."

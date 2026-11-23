@@ -81,7 +81,7 @@ export function ResultScreen({ input }: Props) {
 
       {/* 부적 추천 */}
       <div className="flex w-full max-w-[345px] flex-col items-center gap-6 md:max-w-[480px]">
-        <h2 className="w-full pt-[2px] text-center font-['Mona12'] text-[16px] font-bold tracking-[-0.31px] md:text-[20px]">부적 추천</h2>
+        <h2 className="w-full pt-[2px] text-center font-['Pretendard'] text-[16px] font-bold tracking-[-0.31px] md:text-[20px]">부적 추천</h2>
 
         <div className="flex w-full flex-col items-start gap-3">
           {talismanOptions.map((t) => {
@@ -91,12 +91,12 @@ export function ResultScreen({ input }: Props) {
                 key={t.id}
                 type="button"
                 onClick={() => selectTalisman(t.id)}
-                className={`flex w-full flex-col items-center gap-4 rounded-[4px] bg-white/5 px-4 py-5 text-center md:gap-5 md:px-6 md:py-6 ${
-                  selected ? 'border-2 border-[#f31bc0]' : 'border border-white/50'
+                className={`flex w-full flex-col items-center gap-4 rounded-[12px] bg-white/5 px-4 py-5 text-center md:gap-5 md:px-6 md:py-6 ${
+                  selected ? 'border-2 border-[#f31bc0]' : 'border border-white/15'
                 }`}
               >
                 <div
-                  className="flex items-center justify-center gap-3 font-['Mona12'] text-[18px] font-bold text-white md:text-[22px]"
+                  className="flex items-center justify-center gap-3 font-['Pretendard'] text-[18px] font-bold text-white md:text-[22px]"
                   style={{ textShadow: '0px 2px 0px black' }}
                 >
                   <p>{t.korean}</p>
@@ -126,7 +126,7 @@ export function ResultScreen({ input }: Props) {
           <span className="absolute inset-[-2.5%_-0.5%]">
             <img src={buttonComplete} alt="" className="block size-full" />
           </span>
-          <span className="relative font-['Mona12'] text-[14px] text-white md:text-[17px]">선택 완료</span>
+          <span className="relative font-['Pretendard'] text-[14px] text-white md:text-[17px]">선택 완료</span>
         </button>
       </div>
 
@@ -157,7 +157,7 @@ export function ResultScreen({ input }: Props) {
           <span className="absolute inset-[-12.5%_-3.5%_-22.5%_-3.5%]">
             <img src={buttonBack} alt="" className="block size-full" />
           </span>
-          <span className="relative font-['Mona12'] text-[14px] text-white md:text-[17px]">입력 화면으로 돌아가기</span>
+          <span className="relative font-['Pretendard'] text-[14px] text-white md:text-[17px]">입력 화면으로 돌아가기</span>
         </Link>
       </div>
     </div>

@@ -274,7 +274,7 @@ export function OrderScreen({ profileId }: Props) {
     <div className="flex flex-col items-center gap-8 px-4 py-10">
       <div className="flex w-full max-w-[361px] flex-col gap-8">
         {step !== 'deposit' && step !== 'talisman' && step !== 'reading' && (
-          <p className="text-center font-['Mona12'] text-[20px] font-bold tracking-[1.28px]">
+          <p className="text-center font-['Pretendard'] text-[20px] font-bold">
             {step === 'concern' ? `${profile.nickname}님의 고민` : step === 'product' ? '상품 선택' : '주문 확인'}
           </p>
         )}
@@ -291,8 +291,8 @@ export function OrderScreen({ profileId }: Props) {
                     setTopKey(t.key)
                     setSubKey(null)
                   }}
-                  className={`rounded-[4px] px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[14px] tracking-[1.12px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
-                    topKey === t.key ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
+                  className={`rounded-full px-4 pt-[11px] pb-[10px] font-['Pretendard'] text-[14px] ${
+                    topKey === t.key ? 'border border-transparent bg-[#f31bc0] text-white' : 'border border-white/15 bg-white/5 text-white/85'
                   }`}
                 >
                   {t.label}
@@ -301,7 +301,7 @@ export function OrderScreen({ profileId }: Props) {
             </div>
 
             {selectedTop && (
-              <div className="flex flex-col gap-4 rounded-[4px] border border-white/50 bg-white/5 px-4 py-5">
+              <div className="flex flex-col gap-4 rounded-[12px] border border-white/15 bg-white/5 px-4 py-5">
                 <p className="text-center font-['Pretendard'] text-[14px] text-white/80">어떤 고민인가요?</p>
                 <div className="flex flex-wrap justify-center gap-x-2 gap-y-3">
                   {selectedTop.subs.map((s) => {
@@ -311,8 +311,8 @@ export function OrderScreen({ profileId }: Props) {
                         key={s.key}
                         type="button"
                         onClick={() => pickSub(s.key)}
-                        className={`rounded-[4px] px-3 pt-[9px] pb-2 font-['Pretendard'] text-[13px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
-                          subKey === s.key ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
+                        className={`rounded-full px-3 pt-[9px] pb-2 font-['Pretendard'] text-[13px] ${
+                          subKey === s.key ? 'border border-transparent bg-[#f31bc0] text-white' : 'border border-white/15 bg-white/5 text-white/85'
                         }`}
                       >
                         {s.label}
@@ -335,7 +335,7 @@ export function OrderScreen({ profileId }: Props) {
                   maxLength={200}
                   onChange={(e) => setConcernText(e.target.value)}
                   placeholder="구체적인 고민을 적어 주시면 분석과 부적에 참고해요. (선택)"
-                  className="h-[96px] w-full resize-none rounded-[4px] bg-white px-4 py-3 font-['Pretendard'] text-[16px] text-[#101010] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] placeholder:text-[#b1b1b1] focus:outline-none"
+                  className="h-[96px] w-full resize-none rounded-[12px] bg-white px-4 py-3 font-['Pretendard'] text-[16px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
                 />
                 <p className="text-right font-['Pretendard'] text-[12px] text-[#888]">{concernText.length}/200</p>
               </div>
@@ -361,12 +361,12 @@ export function OrderScreen({ profileId }: Props) {
                     type="button"
                     disabled={!p.available}
                     onClick={() => setProduct(no)}
-                    className={`flex flex-col gap-2 rounded-[4px] bg-white/5 px-4 py-5 text-left disabled:opacity-40 ${
-                      selected && p.available ? 'border-2 border-[#f31bc0]' : 'border border-white/50'
+                    className={`flex flex-col gap-2 rounded-[12px] bg-white/5 px-4 py-5 text-left disabled:opacity-40 ${
+                      selected && p.available ? 'border-2 border-[#f31bc0]' : 'border border-white/15'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-['Mona12'] text-[14px] tracking-[1.12px]">{p.name}</span>
+                      <span className="font-['Pretendard'] text-[14px]">{p.name}</span>
                       <span className="font-['Pretendard'] text-[16px] font-bold text-[#f31bc0]">{formatWon(price)}</span>
                     </div>
                     <p className="font-['Pretendard'] text-[13px] leading-relaxed text-white/70">{p.desc}</p>
@@ -397,7 +397,7 @@ export function OrderScreen({ profileId }: Props) {
         {/* 3) 주문 확인 — 금액·동의·현금영수증 (§6.5, §17.6) */}
         {step === 'confirm' && topKey && subKey && (
           <>
-            <div className="flex flex-col gap-3 rounded-[4px] border border-white/50 bg-white/5 px-4 py-5">
+            <div className="flex flex-col gap-3 rounded-[12px] border border-white/15 bg-white/5 px-4 py-5">
               <Row label="사주" value={profile.nickname} />
               <Row label="고민" value={`${findConcern(topKey, subKey)?.top.label} · ${subConcernLabel(subKey)}`} />
               {concernText && <Row label="작성한 고민" value={concernText} multiline />}
@@ -418,7 +418,7 @@ export function OrderScreen({ profileId }: Props) {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 11))}
                 placeholder="현금영수증 휴대폰 번호 (선택)"
-                className="h-[48px] w-full rounded-[4px] bg-white px-4 font-['Pretendard'] text-[16px] text-[#101010] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] placeholder:text-[#b1b1b1] focus:outline-none"
+                className="h-[48px] w-full rounded-[12px] bg-white px-4 font-['Pretendard'] text-[16px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
               />
               <p className="font-['Pretendard'] text-[12px] leading-relaxed text-[#888]">
                 계좌이체도 현금 거래라 현금영수증을 받을 수 있어요. 번호를 남기면 발급해 드려요.
@@ -480,9 +480,9 @@ export function OrderScreen({ profileId }: Props) {
         {step === 'reading' && activeOrder && reading && !activeOrder.reading_first_viewed_at && (
           <div className="flex flex-col gap-5">
             <div className="flex flex-col items-center gap-2">
-              <p className="font-['Mona12'] text-[20px] font-bold tracking-[1.28px]">고민별 사주 분석</p>
+              <p className="font-['Pretendard'] text-[20px] font-bold">고민별 사주 분석</p>
             </div>
-            <div className="flex flex-col gap-3 rounded-[4px] border border-white/50 bg-white/5 px-5 py-6">
+            <div className="flex flex-col gap-3 rounded-[12px] border border-white/15 bg-white/5 px-5 py-6">
               <p className="font-['Pretendard'] text-[15px] leading-relaxed break-keep text-white/90">
                 분석은 디지털 콘텐츠라 <span className="font-bold text-white">열람하면 환불이 제한돼요.</span>
               </p>
@@ -506,8 +506,8 @@ export function OrderScreen({ profileId }: Props) {
         {step === 'reading' && activeOrder && reading && Boolean(activeOrder.reading_first_viewed_at) && (
           <div className="flex flex-col gap-5">
             <div className="flex flex-col items-center gap-2">
-              <p className="font-['Mona12'] text-[20px] font-bold tracking-[1.28px]">고민별 사주 분석</p>
-              <span className="rounded-full border-2 border-[#f3b526] px-3 py-[2px] font-['Mona12'] text-[11px] text-[#f3b526]">
+              <p className="font-['Pretendard'] text-[20px] font-bold">고민별 사주 분석</p>
+              <span className="rounded-full border-2 border-[#f3b526] px-3 py-[2px] font-['Pretendard'] text-[11px] text-[#f3b526]">
                 임시 분석 · 정식 분석 준비 중
               </span>
             </div>
@@ -522,9 +522,9 @@ export function OrderScreen({ profileId }: Props) {
               {reading.pages.map((page, i) => (
                 <div
                   key={page.title}
-                  className="flex w-[92%] shrink-0 snap-center flex-col gap-4 rounded-[4px] border border-white/50 bg-white/5 px-5 py-6"
+                  className="flex w-[92%] shrink-0 snap-center flex-col gap-4 rounded-[12px] border border-white/15 bg-white/5 px-5 py-6"
                 >
-                  <p className="text-center font-['Mona12'] text-[15px] font-bold tracking-[1.12px] text-[#f31bc0]">
+                  <p className="text-center font-['Pretendard'] text-[15px] font-bold text-[#f31bc0]">
                     {i + 1}. {page.title}
                   </p>
                   <p className="font-['Pretendard'] text-[15px] leading-relaxed break-keep text-white/90">{page.body}</p>
@@ -547,7 +547,7 @@ export function OrderScreen({ profileId }: Props) {
         {step === 'talisman' && activeOrder && picks && (
           <div className="flex flex-col gap-6">
             <div className="flex flex-col items-center gap-2">
-              <p className="font-['Mona12'] text-[20px] font-bold tracking-[1.28px]">부적 추천</p>
+              <p className="font-['Pretendard'] text-[20px] font-bold">부적 추천</p>
               <p className="font-['Pretendard'] text-[13px] text-white/70">
                 {subConcernLabel(activeOrder.sub_concern)} · 보충 오행 {picks.element}
               </p>
@@ -565,17 +565,17 @@ export function OrderScreen({ profileId }: Props) {
                     type="button"
                     disabled={locked}
                     onClick={() => setPickedId(t.id)}
-                    className={`relative flex w-full flex-col items-center gap-4 rounded-[4px] bg-white/5 px-4 py-5 text-center ${
-                      selected ? 'border-2 border-[#f31bc0]' : 'border border-white/50'
+                    className={`relative flex w-full flex-col items-center gap-4 rounded-[12px] bg-white/5 px-4 py-5 text-center ${
+                      selected ? 'border-2 border-[#f31bc0]' : 'border border-white/15'
                     }`}
                   >
                     {t.personal && (
-                      <span className="absolute top-3 left-3 rounded-full border-2 border-[#f31bc0] px-2 py-[2px] font-['Mona12'] text-[11px] text-[#f31bc0]">
+                      <span className="absolute top-3 left-3 rounded-full border-2 border-[#f31bc0] px-2 py-[2px] font-['Pretendard'] text-[11px] text-[#f31bc0]">
                         퍼스널 추천
                       </span>
                     )}
                     <div
-                      className="flex items-center justify-center gap-3 pt-2 font-['Mona12'] text-[18px] font-bold text-white"
+                      className="flex items-center justify-center gap-3 pt-2 font-['Pretendard'] text-[18px] font-bold text-white"
                       style={{ textShadow: '0px 2px 0px black' }}
                     >
                       <p>{t.korean}</p>
@@ -606,14 +606,14 @@ export function OrderScreen({ profileId }: Props) {
                         <button
                           type="button"
                           onClick={() => downloadTalismanImage(chosen, 'wallpaper')}
-                          className="h-[44px] flex-1 rounded-[4px] border border-white/50 font-['Pretendard'] text-[13px] text-white active:translate-y-[2px]"
+                          className="h-[44px] flex-1 rounded-[12px] border border-white/15 font-['Pretendard'] text-[13px] text-white active:translate-y-[2px]"
                         >
                           배경화면용 저장 (9:16)
                         </button>
                         <button
                           type="button"
                           onClick={() => downloadTalismanImage(chosen, 'square')}
-                          className="h-[44px] flex-1 rounded-[4px] border border-white/50 font-['Pretendard'] text-[13px] text-white active:translate-y-[2px]"
+                          className="h-[44px] flex-1 rounded-[12px] border border-white/15 font-['Pretendard'] text-[13px] text-white active:translate-y-[2px]"
                         >
                           정사각 저장 (1:1)
                         </button>
@@ -655,7 +655,7 @@ export function OrderScreen({ profileId }: Props) {
               <button
                 type="button"
                 onClick={() => setRepurchaseAsk(null)}
-                className="h-[44px] flex-1 rounded-[4px] border border-[#101010] font-['Pretendard'] text-[14px] text-[#101010]"
+                className="h-[44px] flex-1 rounded-[12px] border border-[#101010] font-['Pretendard'] text-[14px] text-[#101010]"
               >
                 취소
               </button>
@@ -665,7 +665,7 @@ export function OrderScreen({ profileId }: Props) {
                   setSubKey(repurchaseAsk.subKey)
                   setRepurchaseAsk(null)
                 }}
-                className="h-[44px] flex-1 rounded-[4px] bg-[#f31bc0] font-['Pretendard'] text-[14px] text-white"
+                className="h-[44px] flex-1 rounded-[12px] bg-[#f31bc0] font-['Pretendard'] text-[14px] text-white"
               >
                 다시 선택
               </button>
@@ -683,14 +683,14 @@ export function OrderScreen({ profileId }: Props) {
               <button
                 type="button"
                 onClick={() => setConfirmPick(false)}
-                className="h-[44px] flex-1 rounded-[4px] border border-[#101010] font-['Pretendard'] text-[14px] text-[#101010]"
+                className="h-[44px] flex-1 rounded-[12px] border border-[#101010] font-['Pretendard'] text-[14px] text-[#101010]"
               >
                 취소
               </button>
               <button
                 type="button"
                 onClick={() => void handleSelectTalisman()}
-                className="h-[44px] flex-1 rounded-[4px] bg-[#f31bc0] font-['Pretendard'] text-[14px] text-white"
+                className="h-[44px] flex-1 rounded-[12px] bg-[#f31bc0] font-['Pretendard'] text-[14px] text-white"
               >
                 선택 완료
               </button>
@@ -777,7 +777,7 @@ function ShippingSection({
   }
 
   const inputCls =
-    "h-[48px] w-full rounded-[4px] bg-white px-4 font-['Pretendard'] text-[16px] text-[#101010] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] placeholder:text-[#b1b1b1] focus:outline-none"
+    "h-[48px] w-full rounded-[12px] bg-white px-4 font-['Pretendard'] text-[16px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
 
   async function save() {
     if (saving) return
@@ -807,10 +807,10 @@ function ShippingSection({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-[4px] border border-white/50 bg-white/5 px-4 py-5">
+    <div className="flex flex-col gap-4 rounded-[12px] border border-white/15 bg-white/5 px-4 py-5">
       <div className="flex items-center justify-between">
-        <p className="font-['Mona12'] text-[14px] font-bold tracking-[1.12px]">배송</p>
-        <span className="rounded-full border-2 border-[#f31bc0] px-2 py-[2px] font-['Mona12'] text-[11px] text-[#f31bc0]">
+        <p className="font-['Pretendard'] text-[14px] font-bold">배송</p>
+        <span className="rounded-full border-2 border-[#f31bc0] px-2 py-[2px] font-['Pretendard'] text-[11px] text-[#f31bc0]">
           {SHIPPING_STATUS_LABEL[status]}
         </span>
       </div>
@@ -952,7 +952,7 @@ function ShippingSection({
               value={claimReason}
               onChange={(e) => setClaimReason(e.target.value.slice(0, 300))}
               placeholder="사유를 적어 주세요"
-              className="h-[88px] resize-none rounded-[4px] border border-[#ddd] px-3 py-2 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
+              className="h-[88px] resize-none rounded-[12px] border border-[#ddd] px-3 py-2 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
             />
             {claimOpen === 'return' && (
               <>
@@ -960,20 +960,20 @@ function ShippingSection({
                   value={rBank}
                   onChange={(e) => setRBank(e.target.value)}
                   placeholder="환불받을 은행명"
-                  className="h-[44px] rounded-[4px] border border-[#ddd] px-3 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
+                  className="h-[44px] rounded-[12px] border border-[#ddd] px-3 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
                 />
                 <input
                   value={rAccount}
                   onChange={(e) => setRAccount(e.target.value.replace(/[^0-9-]/g, ''))}
                   placeholder="계좌번호"
                   inputMode="numeric"
-                  className="h-[44px] rounded-[4px] border border-[#ddd] px-3 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
+                  className="h-[44px] rounded-[12px] border border-[#ddd] px-3 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
                 />
                 <input
                   value={rHolder}
                   onChange={(e) => setRHolder(e.target.value)}
                   placeholder="예금주"
-                  className="h-[44px] rounded-[4px] border border-[#ddd] px-3 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
+                  className="h-[44px] rounded-[12px] border border-[#ddd] px-3 font-['Pretendard'] text-[14px] text-[#101010] focus:outline-none"
                 />
               </>
             )}
@@ -981,7 +981,7 @@ function ShippingSection({
               type="button"
               disabled={claimBusy}
               onClick={() => void submitClaim()}
-              className="h-[44px] rounded-[4px] bg-[#f31bc0] font-['Pretendard'] text-[14px] text-white disabled:opacity-40"
+              className="h-[44px] rounded-[12px] bg-[#f31bc0] font-['Pretendard'] text-[14px] text-white disabled:opacity-40"
             >
               {claimOpen === 'exchange' ? '교환 신청하기' : '반품 신청하기'}
             </button>
@@ -1021,16 +1021,16 @@ function DepositPanel({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-2">
-        <p className="font-['Mona12'] text-[20px] font-bold tracking-[1.28px]">입금 안내</p>
+        <p className="font-['Pretendard'] text-[20px] font-bold">입금 안내</p>
         <span
-          className={`rounded-full border-2 px-3 py-1 font-['Mona12'] text-[12px] ${PAYMENT_STATUS_COLOR[order.payment_status]}`}
+          className={`rounded-full border-2 px-3 py-1 font-['Pretendard'] text-[12px] ${PAYMENT_STATUS_COLOR[order.payment_status]}`}
         >
           {PAYMENT_STATUS_LABEL[order.payment_status]}
         </span>
       </div>
 
       {/* 계좌 안내 카드 — 숫자는 Pretendard (§9.2) */}
-      <div className="flex flex-col gap-3 rounded-[4px] bg-white px-4 py-5">
+      <div className="flex flex-col gap-3 rounded-[12px] bg-white px-4 py-5">
         {bankAccountReady ? (
           <>
             <div className="flex items-center justify-between">
@@ -1063,7 +1063,7 @@ function DepositPanel({
             <button
               type="button"
               onClick={() => void onCopy(BANK_ACCOUNT.account, '계좌번호를 복사했어요')}
-              className="h-[40px] flex-1 rounded-[4px] border border-[#101010] font-['Pretendard'] text-[13px] text-[#101010]"
+              className="h-[40px] flex-1 rounded-[12px] border border-[#101010] font-['Pretendard'] text-[13px] text-[#101010]"
             >
               계좌번호 복사
             </button>
@@ -1071,7 +1071,7 @@ function DepositPanel({
           <button
             type="button"
             onClick={() => void onCopy(String(order.amount), '금액을 복사했어요')}
-            className="h-[40px] flex-1 rounded-[4px] border border-[#101010] font-['Pretendard'] text-[13px] text-[#101010]"
+            className="h-[40px] flex-1 rounded-[12px] border border-[#101010] font-['Pretendard'] text-[13px] text-[#101010]"
           >
             금액 복사
           </button>
@@ -1080,7 +1080,7 @@ function DepositPanel({
           <button
             type="button"
             onClick={onOpenBankSheet}
-            className="h-[40px] w-full rounded-[4px] bg-[#101010] font-['Pretendard'] text-[13px] text-white"
+            className="h-[40px] w-full rounded-[12px] bg-[#101010] font-['Pretendard'] text-[13px] text-white"
           >
             은행 앱으로 보내기
           </button>

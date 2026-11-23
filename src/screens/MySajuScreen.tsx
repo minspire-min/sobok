@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-const heart = '/assets/heart.png'
+import { HeartMark } from '../components/HeartMark'
 import { Loading } from '../components/Loading'
 import { PixelButton } from '../components/PixelButton'
 import { SajuSummaryCard } from '../components/SajuSummaryCard'
@@ -91,7 +91,7 @@ export function MySajuScreen() {
   if (profiles.length === 0) {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center gap-8 px-4">
-        <img src={heart} alt="" className="h-16 w-[69px] object-cover" />
+        <HeartMark className="h-14 w-14" />
         <p className="font-['Pretendard'] text-[16px] text-white">사주 정보를 등록해 주세요 :-)</p>
         <div className="w-full max-w-[361px]">
           <PixelButton onClick={() => router.push('/saju/new')}>사주 정보 등록하기</PixelButton>
@@ -110,8 +110,8 @@ export function MySajuScreen() {
               key={p.id}
               type="button"
               onClick={() => selectProfile(p.id)}
-              className={`shrink-0 rounded-[4px] px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[14px] tracking-[1.12px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
-                active?.id === p.id ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
+              className={`shrink-0 rounded-full px-4 pt-[11px] pb-[10px] font-['Pretendard'] text-[14px] ${
+                active?.id === p.id ? 'border border-transparent bg-[#f31bc0] text-white' : 'border border-white/15 bg-white/5 text-white/85'
               }`}
             >
               {p.nickname}
@@ -121,7 +121,7 @@ export function MySajuScreen() {
             type="button"
             onClick={handleAdd}
             disabled={profiles.length >= MAX_PROFILES}
-            className="shrink-0 rounded-[4px] border border-white/30 px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[14px] text-white/80 disabled:opacity-40"
+            className="shrink-0 rounded-[12px] border border-white/30 px-4 pt-[11px] pb-[10px] font-['Pretendard'] text-[14px] text-white/80 disabled:opacity-40"
           >
             +
           </button>
@@ -133,9 +133,9 @@ export function MySajuScreen() {
       {/* 일간 5줄 해석 (무료) */}
       {reading && (
         <div className="flex w-full max-w-[345px] flex-col items-center gap-5 md:max-w-[480px]">
-          <h2 className="font-['Mona12'] text-[16px] font-bold md:text-[20px]">일간 이야기</h2>
-          <div className="flex w-full flex-col gap-4 rounded-[4px] border border-white/50 bg-white/5 px-4 py-5 md:px-6">
-            <p className="text-center font-['Mona12'] text-[14px] tracking-[1.12px] text-[#f31bc0]">{reading.title}</p>
+          <h2 className="font-['Pretendard'] text-[16px] font-bold md:text-[20px]">일간 이야기</h2>
+          <div className="flex w-full flex-col gap-4 rounded-[12px] border border-white/15 bg-white/5 px-4 py-5 md:px-6">
+            <p className="text-center font-['Pretendard'] text-[14px] text-[#f31bc0]">{reading.title}</p>
             <ul className="flex flex-col gap-3">
               {reading.lines.map((line) => (
                 <li key={line} className="font-['Pretendard'] text-[14px] leading-relaxed break-keep text-white/85 md:text-[16px]">
@@ -150,14 +150,14 @@ export function MySajuScreen() {
       {/* 구매한 고민 카드 목록 (PRD §6.7) */}
       {active && orders.filter((o) => o.payment_status !== 'canceled').length > 0 && (
         <div className="flex w-full max-w-[345px] flex-col gap-3 md:max-w-[480px]">
-          <h2 className="text-center font-['Mona12'] text-[16px] font-bold md:text-[20px]">나의 고민</h2>
+          <h2 className="text-center font-['Pretendard'] text-[16px] font-bold md:text-[20px]">나의 고민</h2>
           {orders
             .filter((o) => o.payment_status !== 'canceled')
             .map((o) => (
-              <div key={o.id} className="flex flex-col gap-2 rounded-[4px] border border-white/50 bg-white/5 px-4 py-4">
+              <div key={o.id} className="flex flex-col gap-2 rounded-[12px] border border-white/15 bg-white/5 px-4 py-4">
                 <div className="flex items-center justify-between">
                   <span className="font-['Pretendard'] text-[14px] font-bold">{subConcernLabel(o.sub_concern)}</span>
-                  <span className={`rounded-full border-2 px-2 py-[2px] font-['Mona12'] text-[11px] ${PAYMENT_STATUS_COLOR[o.payment_status]}`}>
+                  <span className={`rounded-full border-2 px-2 py-[2px] font-['Pretendard'] text-[11px] ${PAYMENT_STATUS_COLOR[o.payment_status]}`}>
                     {PAYMENT_STATUS_LABEL[o.payment_status]}
                   </span>
                 </div>
@@ -189,7 +189,7 @@ export function MySajuScreen() {
       {active && (
         <Link
           href={`/saju/${active.id}/order`}
-          className="rounded-full border border-white/30 px-5 py-3 font-['Mona12'] text-[14px] text-white active:translate-y-[2px]"
+          className="rounded-full border border-white/30 px-5 py-3 font-['Pretendard'] text-[14px] text-white active:translate-y-[2px]"
         >
           내 고민에 맞는 부적 보기
         </Link>

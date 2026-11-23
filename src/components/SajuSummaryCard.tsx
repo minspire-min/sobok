@@ -59,7 +59,7 @@ export function SajuSummaryCard({ input }: Props) {
     <div className="flex w-full max-w-[345px] flex-col items-center gap-8 md:max-w-[480px]">
       {/* 헤더 */}
       <div className="flex w-full flex-col items-center gap-4 text-center">
-        <h1 className="font-['Mona12'] text-[32px] font-bold tracking-[1.28px] md:text-[40px]">{input.nickname}의 만세력</h1>
+        <h1 className="font-['Pretendard'] text-[32px] font-bold md:text-[40px]">{input.nickname}의 만세력</h1>
         <p className="font-['Pretendard'] text-[14px] tracking-[-0.15px] text-[#b1b1b1] md:text-[18px]">
           {solarDate.year}.{String(solarDate.month).padStart(2, '0')}.{String(solarDate.day).padStart(2, '0')} (
           {input.calendarType === 'solar' ? '양' : '음'}) {timeLabel} · {input.gender}
@@ -67,11 +67,11 @@ export function SajuSummaryCard({ input }: Props) {
       </div>
 
       {/* 일주 배지 */}
-      <div className="flex items-center gap-6 rounded-[4px] bg-white/5 px-6 py-3 md:px-8 md:py-4">
+      <div className="flex items-center gap-6 rounded-[12px] bg-white/5 px-6 py-3 md:px-8 md:py-4">
         <div className="flex size-[56px] shrink-0 items-center justify-center p-[10px] md:size-[70px]">
           <img src={characterImg} alt="" className="size-full object-contain" style={{ imageRendering: 'pixelated' }} />
         </div>
-        <span className="relative inline-block font-['Mona12'] text-[24px] font-bold md:text-[30px]">
+        <span className="relative inline-block font-['Pretendard'] text-[24px] font-bold md:text-[30px]">
           <span
             aria-hidden
             className="pointer-events-none absolute inset-0"
@@ -85,11 +85,11 @@ export function SajuSummaryCard({ input }: Props) {
 
       {/* 만세력 표 */}
       <div className="flex w-full flex-col items-center gap-3">
-        <table className="w-full table-fixed rounded-[4px] border border-white/50 text-center">
+        <table className="w-full table-fixed rounded-[12px] border border-white/15 text-center">
           <thead>
             <tr className="border-b border-white/40">
               {PILLAR_ORDER.map((key) => (
-                <th key={key} className={`py-[2px] font-['Pretendard'] text-[10px] font-normal tracking-[0.06px] text-[#b1b1b1] md:text-[13px] ${key === 'day' ? 'bg-[#f31bc0]/15' : ''}`}>
+                <th key={key} className={`py-[2px] font-['Pretendard'] text-[10px] font-normal text-[#b1b1b1] md:text-[13px] ${key === 'day' ? 'bg-[#f31bc0]/15' : ''}`}>
                   {PILLAR_LABEL[key]}
                 </th>
               ))}
@@ -98,7 +98,7 @@ export function SajuSummaryCard({ input }: Props) {
               {PILLAR_ORDER.map((key) => {
                 const isHourUnknown = key === 'hour' && timeUnknown
                 return (
-                  <th key={key} className={`px-2 py-1 font-['Pretendard'] text-[12px] font-normal tracking-[0.06px] text-white md:text-[15px] ${key === 'day' ? 'bg-[#f31bc0]/15' : ''}`}>
+                  <th key={key} className={`px-2 py-1 font-['Pretendard'] text-[12px] font-normal text-white md:text-[15px] ${key === 'day' ? 'bg-[#f31bc0]/15' : ''}`}>
                     {isHourUnknown ? <span className="text-white/30">?</span> : key === 'day' ? '(나)' : result.tenGods[key].stem}
                   </th>
                 )
@@ -119,7 +119,7 @@ export function SajuSummaryCard({ input }: Props) {
                         <span className="font-['Pretendard'] text-[22px] font-bold tracking-[-0.26px] md:text-[28px]" style={{ color: ELEMENT_COLOR[detail.element.stem] }}>
                           {detail.stem}
                         </span>
-                        <span className="font-['Pretendard'] text-[11px] tracking-[0.06px] text-[#666] md:text-[14px]">({detail.stemKo})</span>
+                        <span className="font-['Pretendard'] text-[11px] text-[#666] md:text-[14px]">({detail.stemKo})</span>
                       </div>
                     )}
                   </td>
@@ -139,7 +139,7 @@ export function SajuSummaryCard({ input }: Props) {
                         <span className="font-['Pretendard'] text-[22px] font-bold tracking-[-0.26px] md:text-[28px]" style={{ color: ELEMENT_COLOR[detail.element.branch] }}>
                           {detail.branch}
                         </span>
-                        <span className="font-['Pretendard'] text-[11px] tracking-[0.06px] text-[#666] md:text-[14px]">({detail.branchKo})</span>
+                        <span className="font-['Pretendard'] text-[11px] text-[#666] md:text-[14px]">({detail.branchKo})</span>
                       </div>
                     )}
                   </td>
@@ -150,7 +150,7 @@ export function SajuSummaryCard({ input }: Props) {
               {PILLAR_ORDER.map((key) => {
                 const isHourUnknown = key === 'hour' && timeUnknown
                 return (
-                  <td key={key} className={`px-2 py-1 font-['Pretendard'] text-[12px] tracking-[0.06px] text-white md:text-[15px] ${key === 'day' ? 'bg-[#f31bc0]/15' : ''}`}>
+                  <td key={key} className={`px-2 py-1 font-['Pretendard'] text-[12px] text-white md:text-[15px] ${key === 'day' ? 'bg-[#f31bc0]/15' : ''}`}>
                     {isHourUnknown ? <span className="text-white/30">?</span> : result.tenGods[key].branch}
                   </td>
                 )
@@ -158,7 +158,7 @@ export function SajuSummaryCard({ input }: Props) {
             </tr>
           </tbody>
         </table>
-        <button type="button" onClick={() => setModal('tenGods')} className="min-h-[44px] font-['Mona12'] text-[12px] text-white md:text-[15px]">
+        <button type="button" onClick={() => setModal('tenGods')} className="min-h-[44px] font-['Pretendard'] text-[12px] text-white md:text-[15px]">
           자세히 보기
         </button>
       </div>
@@ -167,7 +167,7 @@ export function SajuSummaryCard({ input }: Props) {
       <div className="flex w-full flex-col items-start gap-3">
         <div className="grid w-full grid-cols-[24px_1fr_24px] items-center gap-3">
           <div aria-hidden />
-          <h2 className="text-center font-['Mona12'] text-[16px] font-bold tracking-[-0.31px] md:text-[20px]">신살</h2>
+          <h2 className="text-center font-['Pretendard'] text-[16px] font-bold tracking-[-0.31px] md:text-[20px]">신살</h2>
           <button type="button" onClick={() => setModal('sinsal')} className="-m-3 flex size-[44px] items-center justify-self-end">
             <img src={infoIcon} alt="신살 설명 보기" className="size-[16.667px] md:size-[22px]" />
           </button>
@@ -176,7 +176,7 @@ export function SajuSummaryCard({ input }: Props) {
           {visiblePillars.map((key, i) => (
             <div key={key} className={`flex flex-1 flex-col items-center gap-2 py-3 ${key === 'day' ? 'bg-[#f31bc0]/15' : ''}`}>
               {pillarSals[i].map((name) => (
-                <p key={name} className="font-['Pretendard'] text-[14px] tracking-[0.06px] md:text-[17px]">
+                <p key={name} className="font-['Pretendard'] text-[14px] md:text-[17px]">
                   {sinsalDisplayName(name)}
                 </p>
               ))}
@@ -187,7 +187,7 @@ export function SajuSummaryCard({ input }: Props) {
 
       {/* 오행 분포 */}
       <div className="flex w-full flex-col items-center gap-3">
-        <h2 className="font-['Mona12'] text-[16px] font-bold tracking-[-0.31px] md:text-[20px]">오행 분포</h2>
+        <h2 className="font-['Pretendard'] text-[16px] font-bold tracking-[-0.31px] md:text-[20px]">오행 분포</h2>
         <div className="flex w-full items-end gap-2">
           {ELEMENT_ORDER.map((el) => {
             const count = fiveElementCounts[el] ?? 0

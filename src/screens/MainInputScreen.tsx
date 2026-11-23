@@ -1,6 +1,6 @@
 import { useState } from 'react'
 const backArrow = '/assets/icon-back-arrow.svg'
-const heart = '/assets/heart.png'
+import { HeartMark } from '../components/HeartMark'
 import { Bezel } from '../components/Bezel'
 import { DetailModal } from '../components/DetailModal'
 import { Loading } from '../components/Loading'
@@ -115,8 +115,8 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
     <div className="flex min-h-dvh flex-col items-center justify-between bg-[#1a1a1a] px-4 pt-[60px] pb-[calc(80px+env(safe-area-inset-bottom))]">
       <div className="flex w-full max-w-[361px] flex-col items-center gap-12">
         <div className="flex flex-col items-center gap-4">
-          <img src={heart} alt="" className="h-16 w-[69px] object-cover" />
-          <h1 className="text-[40px] font-bold tracking-[1.6px] text-white">{isRegister ? '사주 등록' : '사주 만세력'}</h1>
+          <HeartMark className="h-14 w-14" />
+          <h1 className="text-[40px] font-bold text-white">{isRegister ? '사주 등록' : '사주 만세력'}</h1>
         </div>
 
         {step === 1 && (
@@ -129,7 +129,7 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
                   placeholder="이름/닉네임 입력"
                   value={input.nickname}
                   onChange={(e) => update('nickname', e.target.value)}
-                  className="w-full bg-transparent text-[16px] tracking-[1.28px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
+                  className="w-full bg-transparent text-[16px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
                 />
               </Bezel>
             </div>
@@ -138,8 +138,8 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
               <button
                 type="button"
                 onClick={() => update('gender', '여')}
-                className={`flex h-[48px] flex-1 items-center justify-center rounded-[4px] px-4 text-[16px] tracking-[1.28px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
-                  input.gender === '여' ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
+                className={`flex h-[48px] flex-1 items-center justify-center rounded-full px-4 text-[16px] ${
+                  input.gender === '여' ? 'border border-transparent bg-[#f31bc0] text-white' : 'border border-white/15 bg-white/5 text-white/85'
                 }`}
               >
                 여자
@@ -147,8 +147,8 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
               <button
                 type="button"
                 onClick={() => update('gender', '남')}
-                className={`flex h-[48px] flex-1 items-center justify-center rounded-[4px] px-4 text-[16px] tracking-[1.28px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
-                  input.gender === '남' ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
+                className={`flex h-[48px] flex-1 items-center justify-center rounded-full px-4 text-[16px] ${
+                  input.gender === '남' ? 'border border-transparent bg-[#f31bc0] text-white' : 'border border-white/15 bg-white/5 text-white/85'
                 }`}
               >
                 남자
@@ -164,7 +164,7 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
                     placeholder="1990.01.01"
                     value={dateText}
                     onChange={(e) => handleDateTextChange(e.target.value)}
-                    className="w-full bg-transparent text-[16px] tracking-[3.2px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
+                    className="w-full bg-transparent text-[16px] text-[#101010] placeholder:text-[#b1b1b1] focus:outline-none"
                   />
                 </Bezel>
               </div>
@@ -199,11 +199,11 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
                     type="button"
                     disabled={input.timeUnknown}
                     onClick={() => setPickerOpen(true)}
-                    className="absolute inset-0 flex w-full items-center justify-between px-4 text-[16px] tracking-[1.28px] text-[#101010] disabled:opacity-50"
+                    className="absolute inset-0 flex w-full items-center justify-between px-4 text-[16px] text-[#101010] disabled:opacity-50"
                   >
                     <span>{timePicked ? formatKoreanTime(input.hour, input.minute) : '시간 선택'}</span>
                   </button>
-                  <span aria-hidden className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-['Mona10'] text-[#101010]">▼</span>
+                  <span aria-hidden className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-['Pretendard'] text-[#101010]">▼</span>
                 </Bezel>
               </div>
               {pickerOpen && (
@@ -248,7 +248,7 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
               {!isRegister && (
                 <div className="flex w-full flex-col items-center gap-4">
                   <div className="flex items-center gap-1">
-                    <img src={heart} alt="" className="h-6 w-[26px] object-cover" />
+                    <HeartMark className="size-6" />
                     <p className="font-['Pretendard'] text-[16px] text-white">요즘 고민 중인 카테고리를 선택해 주세요.</p>
                   </div>
                   <div className="flex flex-wrap justify-center gap-x-3 gap-y-[14px]">
@@ -257,8 +257,8 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
                         key={c.key}
                         type="button"
                         onClick={() => update('category', c.key)}
-                        className={`relative rounded-[4px] px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[14px] tracking-[1.12px] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${
-                          input.category === c.key ? 'bg-[#f31bc0] text-white' : 'bg-white text-[#101010]'
+                        className={`relative rounded-full px-4 pt-[11px] pb-[10px] font-['Pretendard'] text-[14px] ${
+                          input.category === c.key ? 'border border-transparent bg-[#f31bc0] text-white' : 'border border-white/15 bg-white/5 text-white/85'
                         }`}
                       >
                         {c.label}

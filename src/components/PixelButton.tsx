@@ -1,24 +1,22 @@
 import type { ButtonHTMLAttributes } from 'react'
-const buttonPrimary = '/assets/button-primary.svg'
-const buttonSecondary = '/assets/button-secondary.svg'
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'primary' | 'secondary'
 }
 
-// Figma 2:19/8:54/8:60 — 실제 버튼 노치 에셋(button-primary.svg / button-secondary.svg) 그대로 사용
+// 탈픽셀(2026-11-23): 노치 에셋 버튼 → 필(pill) 버튼. 이름은 호출부 호환을 위해 유지.
 export function PixelButton({ variant = 'primary', className = '', children, ...props }: Props) {
-  const asset = variant === 'primary' ? buttonPrimary : buttonSecondary
+  const look =
+    variant === 'primary'
+      ? 'bg-[#f31bc0] text-white hover:shadow-[0_0_30px_rgba(243,27,192,0.25)]'
+      : 'border border-white/25 bg-white/5 text-white hover:bg-white/10'
 
   return (
     <button
-      className={`relative flex h-[62px] w-full items-center justify-center active:translate-y-[2px] disabled:opacity-40 disabled:active:translate-y-0 ${className}`}
+      className={`sb-ease flex h-[56px] w-full items-center justify-center rounded-full px-8 font-['Pretendard'] text-[16px] font-bold hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100 disabled:hover:shadow-none ${look} ${className}`}
       {...props}
     >
-      <span className="absolute inset-[-6.45%_-1.16%_-19.35%_-1.16%]">
-        <img src={asset} alt="" className="block size-full" />
-      </span>
-      <span className="relative text-[18px] font-normal text-white">{children}</span>
+      {children}
     </button>
   )
 }

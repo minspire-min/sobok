@@ -4,11 +4,11 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { HomeReviews } from '../components/HomeReviews'
 
-const heart = '/assets/heart.png'
+import { HeartMark } from '../components/HeartMark'
 
 // PRD §6.2 메인 — 소개 · 숫자 띠 · 이용 방법 · 무료 안내 · 상품 3종 · 고민 진열 · 리뷰 · FAQ · CTA.
-// 2026-11-22 리디자인: 다크+픽셀+마젠타 아이덴티티는 유지하고, 공간감(여백·글래스 카드)·
-// 스프링 모션(sb-ease/sb-reveal, src/index.css)·섹션별로 다른 레이아웃을 더했다.
+// 2026-11-22 리디자인 + 11-23 탈픽셀: 다크+마젠타에 공간감(여백·글래스 카드)·
+// 스프링 모션(sb-ease/sb-reveal, src/index.css)·섹션별로 다른 레이아웃. 픽셀 폰트·칩은 제거됨.
 
 const STEPS = [
   { no: '1', title: '사주 등록', desc: '생년월일시를 입력하면 사주를 풀어 드려요' },
@@ -64,7 +64,7 @@ function CtaButton({ label }: { label: string }) {
       href="/saju"
       className="sb-ease group inline-flex w-full items-center justify-between rounded-full bg-[#f31bc0] py-3 pr-2 pl-7 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(243,27,192,0.25)] active:scale-[0.98]"
     >
-      <span className="font-['Mona12'] text-[15px] font-bold tracking-[1.2px] text-white">{label}</span>
+      <span className="font-['Pretendard'] text-[15px] font-bold text-white">{label}</span>
       <span className="sb-ease flex size-10 items-center justify-center rounded-full bg-black/25 group-hover:translate-x-1">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path d="M4 12h15m-6-7 7 7-7 7" stroke="white" strokeWidth="2" strokeLinecap="square" />
@@ -106,11 +106,11 @@ export function HomeScreen() {
       <div className="relative flex flex-col items-center gap-24 px-5 pt-20 pb-28">
         {/* 히어로 — 좌측 정렬 + 부유하는 심볼 (중앙 정렬 탈피) */}
         <section className="sb-reveal relative w-full max-w-[400px]">
-          <img src={heart} alt="" className="sb-float absolute -top-8 right-1 h-14 w-[60px] object-cover opacity-90" />
-          <span className="inline-block rounded-full bg-[#f31bc0]/10 px-3 py-1 font-['Mona12'] text-[11px] tracking-[0.15em] text-[#f31bc0]">
+          <HeartMark className="sb-float absolute -top-8 right-1 size-12 opacity-90" />
+          <span className="inline-block rounded-full bg-[#f31bc0]/10 px-3 py-1 font-['Pretendard'] text-[11px] tracking-[0.15em] text-[#f31bc0]">
             사주 기반 맞춤 부적
           </span>
-          <h1 className="mt-5 font-['Mona12'] text-[34px] leading-snug font-bold tracking-[1.4px] break-keep md:text-[42px]">
+          <h1 className="mt-5 font-['Pretendard'] text-[34px] leading-snug font-bold break-keep md:text-[42px]">
             나의 사주가 고른
             <br />단 하나의 부적
           </h1>
@@ -131,7 +131,7 @@ export function HomeScreen() {
           <div className="grid grid-cols-3 divide-x divide-white/10 rounded-[1.5rem] bg-white/5 py-5 ring-1 ring-white/10">
             {FACTS.map((f) => (
               <div key={f.label} className="flex flex-col items-center gap-1.5 px-2 text-center">
-                <span className="font-['Mona12'] text-[18px] font-bold tracking-[1px] text-[#f31bc0]">{f.value}</span>
+                <span className="font-['Pretendard'] text-[18px] font-bold text-[#f31bc0]">{f.value}</span>
                 <span className="font-['Pretendard'] text-[11px] break-keep text-white/60">{f.label}</span>
               </div>
             ))}
@@ -140,16 +140,16 @@ export function HomeScreen() {
 
         {/* 이용 방법 — 세로 타임라인 (헤어라인 + 번호) */}
         <section className="w-full max-w-[400px]">
-          <h2 className="sb-reveal font-['Mona12'] text-[18px] font-bold tracking-[1.2px] md:text-[20px]">이용 방법</h2>
+          <h2 className="sb-reveal font-['Pretendard'] text-[18px] font-bold md:text-[20px]">이용 방법</h2>
           <ol className="mt-6 flex flex-col">
             {STEPS.map((s, i) => (
               <li key={s.no} className="sb-reveal relative flex gap-5 pb-8 last:pb-0" style={{ '--d': i } as React.CSSProperties}>
                 {i < STEPS.length - 1 && <span className="absolute top-8 left-[13px] h-[calc(100%-2rem)] w-px bg-white/10" aria-hidden />}
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#f31bc0]/10 font-['Mona12'] text-[13px] font-bold text-[#f31bc0]">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#f31bc0]/10 font-['Pretendard'] text-[13px] font-bold text-[#f31bc0]">
                   {s.no}
                 </span>
                 <div className="flex flex-col gap-1 pt-0.5">
-                  <p className="font-['Mona12'] text-[14px] tracking-[1.12px]">{s.title}</p>
+                  <p className="font-['Pretendard'] text-[14px]">{s.title}</p>
                   <p className="font-['Pretendard'] text-[14px] leading-relaxed break-keep text-white/60">{s.desc}</p>
                 </div>
               </li>
@@ -161,7 +161,7 @@ export function HomeScreen() {
         <section className="sb-reveal w-full max-w-[400px]">
           <div className="rounded-[2rem] bg-white/5 p-1.5 ring-1 ring-white/10">
             <div className="rounded-[calc(2rem-0.375rem)] bg-[#141414] px-6 py-7 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]">
-              <span className="font-['Mona12'] text-[11px] tracking-[0.15em] text-[#f3b526]">무료</span>
+              <span className="font-['Pretendard'] text-[11px] tracking-[0.15em] text-[#f3b526]">무료</span>
               <p className="mt-3 font-['Pretendard'] text-[15px] leading-relaxed break-keep text-white/85">
                 회원가입만 하면 <span className="font-bold text-white">일간 이야기 다섯 줄</span>과{' '}
                 <span className="font-bold text-white">만세력(사주 여덟 글자 · 십신 · 신살 · 오행 분포)</span>을 보여
@@ -173,7 +173,7 @@ export function HomeScreen() {
 
         {/* 부적 상품 — 카드 3종, 마지막 카드만 마젠타 링으로 또렷하게 */}
         <section className="w-full max-w-[400px]">
-          <h2 className="sb-reveal font-['Mona12'] text-[18px] font-bold tracking-[1.2px] md:text-[20px]">부적 상품</h2>
+          <h2 className="sb-reveal font-['Pretendard'] text-[18px] font-bold md:text-[20px]">부적 상품</h2>
           <div className="mt-6 flex flex-col gap-4">
             {PRODUCTS.map((p, i) => (
               <div
@@ -183,13 +183,13 @@ export function HomeScreen() {
               >
                 <div className="rounded-[calc(1.75rem-0.375rem)] bg-[#141414] px-5 py-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]">
                   {p.badge && (
-                    <span className="mb-3 inline-block rounded-full bg-[#f31bc0]/10 px-3 py-1 font-['Mona12'] text-[11px] tracking-[0.12em] text-[#f31bc0]">
+                    <span className="mb-3 inline-block rounded-full bg-[#f31bc0]/10 px-3 py-1 font-['Pretendard'] text-[11px] tracking-[0.12em] text-[#f31bc0]">
                       {p.badge}
                     </span>
                   )}
                   <div className="flex items-baseline justify-between gap-3">
-                    <p className="font-['Mona12'] text-[14px] leading-snug tracking-[1.12px] break-keep">{p.name}</p>
-                    <p className="shrink-0 font-['Mona12'] text-[16px] font-bold text-[#f31bc0]">{p.price}</p>
+                    <p className="font-['Pretendard'] text-[14px] leading-snug break-keep">{p.name}</p>
+                    <p className="shrink-0 font-['Pretendard'] text-[16px] font-bold text-[#f31bc0]">{p.price}</p>
                   </div>
                   <p className="mt-3 font-['Pretendard'] text-[14px] leading-relaxed break-keep text-white/60">{p.desc}</p>
                 </div>
@@ -208,7 +208,7 @@ export function HomeScreen() {
 
         {/* 고민 진열 — 픽셀 칩 (브랜드 요소 유지) */}
         <section className="w-full max-w-[400px]">
-          <h2 className="sb-reveal text-center font-['Mona12'] text-[18px] font-bold tracking-[1.2px] md:text-[20px]">
+          <h2 className="sb-reveal text-center font-['Pretendard'] text-[18px] font-bold md:text-[20px]">
             어떤 고민이 있나요?
           </h2>
           <div className="sb-reveal mt-6 flex flex-wrap justify-center gap-x-3 gap-y-[14px]" style={{ '--d': 1 } as React.CSSProperties}>
@@ -216,7 +216,7 @@ export function HomeScreen() {
               <Link
                 key={c}
                 href="/saju"
-                className="sb-ease rounded-[4px] bg-white px-4 pt-[11px] pb-[10px] font-['Mona12'] text-[14px] tracking-[1.12px] text-[#101010] shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] hover:-translate-y-0.5 hover:bg-[#ffe9fa] active:translate-y-0"
+                className="sb-ease rounded-full border border-white/15 bg-white/5 px-4 py-2.5 font-['Pretendard'] text-[14px] text-white/85 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0"
               >
                 {c}
               </Link>
@@ -229,7 +229,7 @@ export function HomeScreen() {
 
         {/* FAQ — 네이티브 아코디언, 헤어라인 구분 */}
         <section className="sb-reveal w-full max-w-[400px]">
-          <h2 className="font-['Mona12'] text-[18px] font-bold tracking-[1.2px] md:text-[20px]">자주 묻는 질문</h2>
+          <h2 className="font-['Pretendard'] text-[18px] font-bold md:text-[20px]">자주 묻는 질문</h2>
           <div className="mt-4 flex flex-col divide-y divide-white/10 border-y border-white/10">
             {FAQS.map((f) => (
               <details key={f.q} className="group py-4">
@@ -259,8 +259,8 @@ export function HomeScreen() {
               className="pointer-events-none absolute -top-20 left-1/2 size-[260px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(243,27,192,0.18),transparent_65%)]"
               aria-hidden
             />
-            <img src={heart} alt="" className="mx-auto h-10 w-[43px] object-cover" />
-            <p className="mt-5 font-['Mona12'] text-[22px] leading-snug font-bold tracking-[1.3px] break-keep">
+            <HeartMark className="mx-auto size-9" />
+            <p className="mt-5 font-['Pretendard'] text-[22px] leading-snug font-bold break-keep">
               부적이 필요한 순간,
               <br />
               소福소福

@@ -40,7 +40,7 @@ export function TimePickerModal({ hour, minute, onConfirm, onCancel }: Props) {
       onClick={onCancel}
     >
       <div
-        className="flex w-full flex-col gap-4 rounded-t-[4px] bg-white px-5 pt-5 pb-[calc(24px+env(safe-area-inset-bottom))] lg:max-w-[335px] lg:rounded-[4px] lg:pb-6"
+        className="flex w-full flex-col gap-4 rounded-t-[4px] bg-white px-5 pt-5 pb-[calc(24px+env(safe-area-inset-bottom))] lg:max-w-[335px] lg:rounded-[12px] lg:pb-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -63,7 +63,7 @@ export function TimePickerModal({ hour, minute, onConfirm, onCancel }: Props) {
         <div className="relative flex justify-center gap-2">
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 h-[40px] rounded-[4px] bg-[#f5f5f5]"
+            className="pointer-events-none absolute inset-x-0 h-[40px] rounded-[12px] bg-[#f5f5f5]"
             style={{ top: BAND_TOP }}
           />
           <WheelColumn<'AM' | 'PM'> label="" values={AMPM} selected={draftAmPm} onSettle={setDraftAmPm} formatLabel={(v) => AMPM_LABEL[v]} width={64} />

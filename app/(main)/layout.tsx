@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { SplashScreen } from '@/components/SplashScreen'
 import { waitForAppFonts } from '@/lib/fontLoading'
 
-const heart = '/assets/heart.png'
+import { HeartMark } from '@/components/HeartMark'
 
 // PRD §6.1 — 상단 로고 + GNB(홈 · 내 사주 · 마이) 56px, 현재 메뉴 마젠타 밑줄, 하단 푸터.
 const MENUS = [
@@ -30,8 +30,8 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#1a1a1a]">
         <div className="mx-auto flex h-[56px] w-full max-w-[480px] items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-            <img src={heart} alt="" className="h-5 w-[22px] object-cover" />
-            <span className="font-['Mona12'] text-[16px] font-bold tracking-[1.28px]">소福소福</span>
+            <HeartMark className="size-5" />
+            <span className="font-['Pretendard'] text-[16px] font-bold">소福소福</span>
           </Link>
           <nav className="flex items-center gap-5">
             {MENUS.map((m) => {
@@ -40,7 +40,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
                 <Link
                   key={m.to}
                   href={m.to}
-                  className={`pb-[2px] font-['Mona12'] text-[14px] tracking-[1.12px] ${
+                  className={`pb-[2px] font-['Pretendard'] text-[14px] ${
                     isActive ? 'border-b-2 border-[#f31bc0] text-white' : 'text-white/70'
                   }`}
                 >

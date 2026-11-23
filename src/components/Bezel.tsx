@@ -1,11 +1,6 @@
 import type { HTMLAttributes } from 'react'
 
-// pixel-design-skill.md §4 입력창 스펙 — 흰 배경 + 눌린 느낌의 inset 베젤
+// 탈픽셀(2026-11-23): 눌린 인셋 베젤 → 매끈한 흰 입력 컨테이너. 이름은 호출부 호환을 위해 유지.
 export function Bezel({ className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={`relative flex items-center rounded-[4px] bg-white shadow-[inset_0_3px_0_0_rgba(0,0,0,0.4)] ${className}`}
-      {...props}
-    />
-  )
+  return <div className={`relative flex items-center rounded-[12px] bg-white ring-1 ring-black/5 ${className}`} {...props} />
 }

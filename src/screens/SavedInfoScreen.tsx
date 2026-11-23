@@ -1,5 +1,5 @@
 import { useState } from 'react'
-const heart = '/assets/heart.png'
+import { HeartMark } from '../components/HeartMark'
 import { PixelButton } from '../components/PixelButton'
 
 type Props = {
@@ -16,8 +16,8 @@ export function SavedInfoScreen({ nickname, onUseSaved, onNewInput, onDelete }: 
   return (
     <div className="flex min-h-dvh flex-col items-center gap-[60px] bg-[#1a1a1a] px-4 pt-[60px] pb-[calc(160px+env(safe-area-inset-bottom))]">
       <div className="flex flex-col items-center gap-4">
-        <img src={heart} alt="" className="h-16 w-[69px] object-cover" />
-        <h1 className="text-[40px] font-bold tracking-[1.6px] text-white">사주 만세력</h1>
+        <HeartMark className="h-14 w-14" />
+        <h1 className="text-[40px] font-bold text-white">사주 만세력</h1>
       </div>
 
       <div className="flex w-full flex-1 flex-col items-center gap-6">
@@ -57,7 +57,7 @@ export function SavedInfoScreen({ nickname, onUseSaved, onNewInput, onDelete }: 
               <button
                 type="button"
                 onClick={() => setShowDeletePopup(false)}
-                className="min-h-[44px] flex-1 rounded-[4px] border border-[#d2d5db] bg-white font-['Pretendard'] text-[16px] text-[#0a0a0a]"
+                className="min-h-[44px] flex-1 rounded-[12px] border border-[#d2d5db] bg-white font-['Pretendard'] text-[16px] text-[#0a0a0a]"
               >
                 취소
               </button>
@@ -67,7 +67,7 @@ export function SavedInfoScreen({ nickname, onUseSaved, onNewInput, onDelete }: 
                   setShowDeletePopup(false)
                   onDelete()
                 }}
-                className="min-h-[44px] flex-1 rounded-[4px] border border-[#013dff] bg-[#0a0a0a] font-['Pretendard'] text-[16px] text-white"
+                className="min-h-[44px] flex-1 rounded-[12px] border border-[#013dff] bg-[#0a0a0a] font-['Pretendard'] text-[16px] text-white"
               >
                 삭제
               </button>

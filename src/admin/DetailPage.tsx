@@ -151,7 +151,7 @@ export function DetailPage() {
             <CardContent className="flex flex-col gap-4">
               <div className="flex items-center gap-3 text-base text-[#0a0a0a]">
                 <span>고민 카테고리:</span>
-                <span className="rounded-[4px] bg-[#f31bc0]/15 px-3 py-1 text-sm text-[#0a0a0a]">{categoryLabel(submission.category)}</span>
+                <span className="rounded-[12px] bg-[#f31bc0]/15 px-3 py-1 text-sm text-[#0a0a0a]">{categoryLabel(submission.category)}</span>
               </div>
               <div className="flex items-center gap-5 text-base text-[#0a0a0a]">
                 <span>부족 오행:</span>
@@ -214,7 +214,7 @@ export function DetailPage() {
                 </p>
                 <Button
                   size="sm"
-                  className="rounded-[4px] px-2.5 py-2"
+                  className="rounded-[12px] px-2.5 py-2"
                   disabled={pendingTalismanId === submission.selectedTalismanId}
                   onClick={handleConfirmTalisman}
                 >
@@ -236,7 +236,7 @@ export function DetailPage() {
                 rows={3}
               />
               <div className="flex w-full justify-end">
-                <Button size="sm" className="rounded-[4px] px-2.5 py-2" onClick={handleMemoSave} disabled={saving}>
+                <Button size="sm" className="rounded-[12px] px-2.5 py-2" onClick={handleMemoSave} disabled={saving}>
                   {saving ? '저장 중...' : '메모 저장'}
                 </Button>
               </div>
@@ -252,7 +252,7 @@ export function DetailPage() {
                 <p className="whitespace-pre-line text-sm">{submission.reading}</p>
               ) : (
                 <div className="flex items-center gap-5">
-                  <Button size="sm" className="rounded-[4px] px-2.5 py-2" onClick={handleGenerateReading} disabled={readingLoading}>
+                  <Button size="sm" className="rounded-[12px] px-2.5 py-2" onClick={handleGenerateReading} disabled={readingLoading}>
                     {readingLoading ? '생성 중...' : '풀이 생성'}
                   </Button>
                   {submission.readingFailedAt && (

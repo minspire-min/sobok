@@ -28,20 +28,20 @@ export function renderTalismanImage(card: TalismanCard, ratio: TalismanRatio): s
   const startY = (height - totalH) / 2 + charSize * 0.78
   ctx.fillStyle = '#ffffff'
   ctx.textAlign = 'center'
-  ctx.font = `bold ${charSize}px 'Mona12', 'Apple Myungjo', serif`
+  ctx.font = `bold ${charSize}px 'Pretendard', 'Apple Myungjo', serif`
   chars.forEach((ch, i) => {
     ctx.fillText(ch, width / 2, startY + i * charSize * 1.12)
   })
 
   // 하단: 독음 · 뜻 · 브랜드
   ctx.fillStyle = '#f31bc0'
-  ctx.font = `bold 52px 'Mona12', sans-serif`
+  ctx.font = `bold 52px 'Pretendard', sans-serif`
   ctx.fillText(card.korean, width / 2, height - 220)
   ctx.fillStyle = 'rgba(255,255,255,0.8)'
   ctx.font = `36px 'Pretendard', sans-serif`
   ctx.fillText(card.meaning, width / 2, height - 150)
   ctx.fillStyle = 'rgba(255,255,255,0.4)'
-  ctx.font = `28px 'Mona12', sans-serif`
+  ctx.font = `28px 'Pretendard', sans-serif`
   ctx.fillText('소福소福', width / 2, height - 92)
 
   return canvas.toDataURL('image/png')
