@@ -93,8 +93,10 @@ export function AdminScreen() {
     setLoginError(null)
     try {
       await adminSignIn(email, password)
-    } catch {
-      setLoginError('로그인에 실패했어요. 이메일과 비밀번호를 확인해 주세요.')
+    } catch (e) {
+      // 서버 잠금 훅 메시지(5회 실패 시 10분 잠금)는 그대로 노출
+      const msg = e instanceof Error ? e.message : ''
+      setLoginError(msg.includes('잠겼') ? msg : '로그인에 실패했어요. 이메일과 비밀번호를 확인해 주세요.')
     }
   }
 

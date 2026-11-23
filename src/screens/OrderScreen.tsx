@@ -916,7 +916,9 @@ function ShippingSection({
             </a>
           )}
           {status === 'exchange_done' && (
-            <p className="font-['Pretendard'] text-[13px] text-white/70">교환이 완료됐어요.</p>
+            <p className="font-['Pretendard'] text-[13px] text-white/70">
+              교환이 완료됐어요. 교환은 주문당 1회라 추가 문제가 있으면 마이 &gt; 문의하기로 알려 주세요.
+            </p>
           )}
           {status === 'return_requested' && (
             <p className="font-['Pretendard'] text-[13px] leading-relaxed break-keep text-white/70">
@@ -943,7 +945,7 @@ function ShippingSection({
           <div className="flex flex-col gap-3">
             <p className="font-['Pretendard'] text-[13px] leading-relaxed break-keep text-[#8c8c8c]">
               {claimOpen === 'exchange'
-                ? '파손·오배송 등 사유를 적어 주세요. 확인 후 새로 그려서 보내 드려요.'
+                ? '파손·오배송 등 사유를 적어 주세요. 확인 후 새로 그려서 보내 드려요. 교환은 주문당 1회 가능해요.'
                 : `사유와 환불받을 계좌를 적어 주세요. 분석을 이미 열람한 경우 분석 금액을 뺀 차액이 환불돼요${
                     order.refund_amount ? '' : order.reading_first_viewed_at ? ` (예상 ${formatWon(order.amount - (order.kind === 'new' ? 10000 : 2000))})` : ` (전액 ${formatWon(order.amount)})`
                   }. 반품 보낼 주소는 접수 후 안내드려요.`}
