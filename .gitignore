@@ -31,3 +31,8 @@ scripts/.*.png
 next-env.d.ts
 scripts/.out
 .next.nosync
+
+# 로컬 도구 상태·외부 클론 (커밋 금지)
+.claude/
+.omc/
+next-ai-draw-io/

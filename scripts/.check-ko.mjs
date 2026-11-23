@@ -1,0 +1,16 @@
+import { chromium } from 'playwright'
+const browser = await chromium.launch()
+const page = await browser.newPage({ viewport: { width: 1300, height: 1600 } })
+const errors = []
+page.on('pageerror', (e) => errors.push(String(e)))
+page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()) })
+await page.goto('file:///tmp/installed-skills-catalog.html', { waitUntil: 'load' })
+console.log('match-count:', await page.textContent('#match-count'))
+console.log('카드 수:', await page.locator('.card').count())
+await page.fill('#q', 'PRD')
+await page.waitForTimeout(150)
+console.log('검색 PRD:', await page.textContent('#match-count'))
+await page.fill('#q', '')
+console.log('JS 에러:', errors.length ? errors : '없음')
+await page.screenshot({ path: '/tmp/artifact-ko.png' })
+await browser.close()
