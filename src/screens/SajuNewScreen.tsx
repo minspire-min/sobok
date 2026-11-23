@@ -27,7 +27,7 @@ export function SajuNewScreen() {
 
   return (
     <>
-      <MainInputScreen variant="register" onSubmit={handleSubmit} />
+      <MainInputScreen onSubmit={handleSubmit} />
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
     </>
   )

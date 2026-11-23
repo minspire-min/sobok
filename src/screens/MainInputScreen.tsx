@@ -7,13 +7,9 @@ import { Loading } from '../components/Loading'
 import { PixelButton } from '../components/PixelButton'
 import { PixelCheckbox } from '../components/PixelCheckbox'
 import { TimePickerModal } from '../components/TimePickerModal'
-import { CATEGORIES } from '../lib/categories'
 import { formatKoreanTime } from '../lib/time'
 import { formatDateInput, parseDateText } from '../lib/textInputs'
-import { clearSubmissionId, saveSubmissionId } from '../lib/storage'
-import { createSubmission } from '../lib/submissionApi'
 import type { SajuFormInput } from '../lib/types'
-import { usePageVisitTracking } from '../lib/usePageVisitTracking'
 import { validateForm } from '../lib/validation'
 
 function makeDefaultInput(): SajuFormInput {
@@ -35,15 +31,13 @@ function makeDefaultInput(): SajuFormInput {
 
 type Props = {
   onSubmit: (input: SajuFormInput) => void | Promise<void>
-  // register: 회원 사주 등록용(PRD §6.4) — 고민 선택 없음, 이벤트 통계·서버 제출 없음
-  variant?: 'event' | 'register'
 }
 
-// Figma `73:914`(Main_1/2) · `95:2136`(Main_2/2) — 입력이 너무 많아 2스텝으로 나눴다.
+// 회원 사주 등록 폼(PRD §6.4) — 입력이 많아 2스텝. 고민 선택은 결제 직전 단계로 분리.
+// (이벤트 변형·넷리파이 제출은 2026-11-23 제거 — legacy 저장소에만 존재)
 // 1스텝: 닉네임 → 성별 → 생년월일 → 양음력/윤달 → 시각 → 시간모름 → [다음]
-// 2스텝: [이전] → 고민 카테고리(event만) → 동의 → [사주 확인하기/사주 등록하기]
-export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
-  const isRegister = variant === 'register'
+// 2스텝: [이전] → 동의 → [사주 등록하기]
+export function MainInputScreen({ onSubmit }: Props) {
   const [step, setStep] = useState<1 | 2>(1)
   const [input, setInput] = useState<SajuFormInput>(makeDefaultInput)
   const [dateText, setDateText] = useState('')
@@ -51,7 +45,6 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [showConsent, setShowConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const { markCompleted } = usePageVisitTracking(isRegister ? null : 'main')
 
   const parsedDate = parseDateText(dateText)
   const realismErrors = validateForm(input)
@@ -60,7 +53,7 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
   const dateOk = Boolean(parsedDate) && !realismErrors.date
   const timeOk = input.timeUnknown || timePicked
   const step1Valid = !realismErrors.nickname && input.gender !== null && dateOk && timeOk
-  const step2Valid = (isRegister || input.category !== null) && input.consent
+  const step2Valid = input.consent
 
   function update<K extends keyof SajuFormInput>(key: K, value: SajuFormInput[K]) {
     setInput((prev) => {
@@ -87,28 +80,15 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
     if (step1Valid) setStep(2)
   }
 
-  // PRD v2 §3.5 R5 — 로딩은 서버 저장 요청(R12)과 함께 최소 1초는 보이도록 묶는다.
-  // 서버 저장이 실패해도(네트워크 문제 등) 참여자 결과 확인 자체는 막지 않는다 —
-  // 이 경우 어드민 목록엔 안 뜨지만 로컬 저장 기반 결과 화면은 그대로 진행된다.
+  // 저장은 부모(SajuNewScreen)가 Supabase로 처리. 실패 시 폼은 유지.
   async function handleSubmit() {
     if (!step1Valid || !step2Valid || submitting) return
     setSubmitting(true)
-    if (isRegister) {
-      // 회원 사주 등록 — 저장은 부모(SajuNewScreen)가 Supabase로 처리. 실패 시 폼은 유지.
-      try {
-        await onSubmit(input)
-      } finally {
-        setSubmitting(false)
-      }
-      return
+    try {
+      await onSubmit(input)
+    } finally {
+      setSubmitting(false)
     }
-    clearSubmissionId()
-    const [created] = await Promise.all([createSubmission(input), new Promise((resolve) => setTimeout(resolve, 1000))])
-    if (created) {
-      saveSubmissionId(created.id)
-      markCompleted(created.id)
-    }
-    onSubmit(input)
   }
 
   return (
@@ -116,7 +96,7 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
       <div className="flex w-full max-w-[361px] flex-col items-center gap-12">
         <div className="flex flex-col items-center gap-4">
           <HeartMark className="h-14 w-14" />
-          <h1 className="text-[40px] font-bold text-white">{isRegister ? '사주 등록' : '사주 만세력'}</h1>
+          <h1 className="text-[40px] font-bold text-white">사주 등록</h1>
         </div>
 
         {step === 1 && (
@@ -244,39 +224,12 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
                 <span className="font-['Pretendard'] text-[16px] text-white/80">이전</span>
               </button>
 
-              {/* 고민 선택은 회원 서비스에서는 결제 직전 단계로 이동(PRD §6.4) — event 변형에만 표시 */}
-              {!isRegister && (
-                <div className="flex w-full flex-col items-center gap-4">
-                  <div className="flex items-center gap-1">
-                    <HeartMark className="size-6" />
-                    <p className="font-['Pretendard'] text-[16px] text-white">요즘 고민 중인 카테고리를 선택해 주세요.</p>
-                  </div>
-                  <div className="flex flex-wrap justify-center gap-x-3 gap-y-[14px]">
-                    {CATEGORIES.map((c) => (
-                      <button
-                        key={c.key}
-                        type="button"
-                        onClick={() => update('category', c.key)}
-                        className={`relative rounded-full px-4 pt-[11px] pb-[10px] font-['Pretendard'] text-[14px] ${
-                          input.category === c.key ? 'border border-transparent bg-[#f31bc0] text-white' : 'border border-white/15 bg-white/5 text-white/85'
-                        }`}
-                      >
-                        {c.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="flex w-full items-center">
               <PixelCheckbox
                 id="consent"
-                label={
-                  isRegister
-                    ? '사주 정보 저장에 동의하며, 타인의 사주는 본인 동의를 받았어요.'
-                    : '개인정보 수집 및 이용에 동의합니다.'
-                }
+                label="사주 정보 저장에 동의하며, 타인의 사주는 본인 동의를 받았어요."
                 className="font-['Pretendard']"
                 checked={input.consent}
                 onChange={(e) => update('consent', e.target.checked)}
@@ -300,7 +253,7 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
           </PixelButton>
         ) : (
           <PixelButton onClick={handleSubmit} disabled={!step2Valid || submitting}>
-            {isRegister ? '사주 등록하기' : '사주 확인하기'}
+            사주 등록하기
           </PixelButton>
         )}
       </div>
@@ -310,27 +263,17 @@ export function MainInputScreen({ onSubmit, variant = 'event' }: Props) {
       {showConsent && (
         <DetailModal title="개인정보 수집 및 이용" onClose={() => setShowConsent(false)}>
           <div className="flex flex-col gap-4 text-[14px] text-[#101010]">
-            {isRegister ? (
-              <div className="flex flex-col gap-1">
-                <p className="font-['Pretendard'] font-bold">[사주 정보 저장에 대한 동의]</p>
-                <p className="font-['Pretendard']">- 수집 및 이용 주체: 소福소福 (대표 윤민지)</p>
-                <p className="font-['Pretendard']">- 수집·이용 목적: 사주 풀이 제공 및 부적 추천</p>
-                <p className="font-['Pretendard']">- 수집 항목: 이름/닉네임, 성별, 생년월일시</p>
-                <p className="font-['Pretendard']">- 보유 및 이용 기간: 회원 탈퇴 후 7일 이내 삭제</p>
-                <p className="font-['Pretendard']">- 가족·지인 등 타인의 사주를 등록하는 경우, 그 당사자의 동의를 받은 뒤 등록해 주세요.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1">
-                <p className="font-['Pretendard'] font-bold">[개인정보 수집 및 이용에 대한 동의]</p>
-                <p className="font-['Pretendard']">- 수집 및 이용 주체: 윤민지(민지민)</p>
-                <p className="font-['Pretendard']">- 개인정보 수집·이용 목적: 사주 만세력 확인 및 사주/부적 분석 활용</p>
-                <p className="font-['Pretendard']">- 수집하는 개인정보 항목: 이름/닉네임, 성별, 생년월일시, 고민 카테고리</p>
-                <p className="font-['Pretendard']">- 개인정보 보유 및 이용 기간: 15일 내 전체 폐기</p>
-              </div>
-            )}
+            <div className="flex flex-col gap-1">
+              <p className="font-['Pretendard'] font-bold">[사주 정보 저장에 대한 동의]</p>
+              <p className="font-['Pretendard']">- 수집 및 이용 주체: 소福소福 (대표 윤민지)</p>
+              <p className="font-['Pretendard']">- 수집·이용 목적: 사주 풀이 제공 및 부적 추천</p>
+              <p className="font-['Pretendard']">- 수집 항목: 이름/닉네임, 성별, 생년월일시</p>
+              <p className="font-['Pretendard']">- 보유 및 이용 기간: 회원 탈퇴 후 7일 이내 삭제</p>
+              <p className="font-['Pretendard']">- 가족·지인 등 타인의 사주를 등록하는 경우, 그 당사자의 동의를 받은 뒤 등록해 주세요.</p>
+            </div>
             <p className="font-['Pretendard']">
-              귀하는 개인정보 수집·이용에 동의하지 않을 권리가 있습니다. 동의를 거부하실 경우 사주 확인
-              {isRegister ? ' 및 사주 등록' : ' 및 이벤트 참여'}이 제한됩니다.
+              귀하는 개인정보 수집·이용에 동의하지 않을 권리가 있습니다. 동의를 거부하실 경우 사주 확인 및 사주 등록이
+              제한됩니다.
             </p>
           </div>
         </DetailModal>
