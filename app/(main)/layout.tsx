@@ -56,8 +56,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
       <footer className="border-t border-white/10 px-4 py-8">
         <div className="mx-auto flex w-full max-w-[480px] flex-col gap-2 font-['Pretendard'] text-[12px] leading-relaxed text-[#888]">
-          <p className="font-bold text-white/60">소福소福 (소복소복)</p>
-          <p>대표: 윤민지 · 사업자 정보는 사업자등록 후 표기됩니다.</p>
+          <p className="font-bold text-white/60">소福소福 (소복소복) by Minspire</p>
+          <p>상호: 민스파이어(Minspire) · 대표: 윤민지 · 사업자등록번호: 861-07-03454</p>
+          <p>통신판매업 신고번호·주소·연락처는 신고 후 표기됩니다.</p>
           <p className="flex gap-3">
             <span>이용약관(준비 중)</span>
             <span>개인정보처리방침(준비 중)</span>

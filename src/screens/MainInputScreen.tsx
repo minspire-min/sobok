@@ -265,7 +265,7 @@ export function MainInputScreen({ onSubmit }: Props) {
           <div className="flex flex-col gap-4 text-[14px] text-[#101010]">
             <div className="flex flex-col gap-1">
               <p className="font-['Pretendard'] font-bold">[사주 정보 저장에 대한 동의]</p>
-              <p className="font-['Pretendard']">- 수집 및 이용 주체: 소福소福 (대표 윤민지)</p>
+              <p className="font-['Pretendard']">- 수집 및 이용 주체: 민스파이어(Minspire) · 대표 윤민지 (서비스명 소福소福)</p>
               <p className="font-['Pretendard']">- 수집·이용 목적: 사주 풀이 제공 및 부적 추천</p>
               <p className="font-['Pretendard']">- 수집 항목: 이름/닉네임, 성별, 생년월일시</p>
               <p className="font-['Pretendard']">- 보유 및 이용 기간: 회원 탈퇴 후 7일 이내 삭제</p>
