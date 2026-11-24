@@ -768,7 +768,7 @@ export function AdminScreen() {
             </div>
 
             <p className="text-[12px] text-[#888]">
-              ※ 결제 확인일(paid_at) 기준 집계이며, 부가세 별도 금액이에요. 목록 한도(최근 300건)를 넘으면 오래된 주문은
+              ※ 결제 확인일(paid_at) 기준 집계예요. 목록 한도(최근 300건)를 넘으면 오래된 주문은
               집계에서 빠져요.
             </p>
           </div>

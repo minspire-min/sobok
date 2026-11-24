@@ -24,7 +24,7 @@ const FACTS = [
   { value: '40가지', label: '고민 맞춤 추천' },
 ]
 
-// 가격은 PRD §17.1 (부가세 별도)
+// 가격은 PRD §17.1 — 간이과세자라 표시 가격이 최종 금액(§17.8). 가격 개편은 §17.7 확정 대기
 const PRODUCTS = [
   {
     name: '사주 분석 + 이미지 부적',
@@ -198,7 +198,7 @@ export function HomeScreen() {
           </div>
           <div className="mt-4 flex flex-col gap-1.5">
             <p className="font-['Pretendard'] text-[12px] leading-relaxed break-keep text-white/40">
-              ※ 가격은 부가세 별도이며, 같은 고민을 다시 받을 때는 재구매 가격이 적용돼요.
+              ※ 표시 가격이 최종 결제 금액이에요. 같은 고민을 다시 받을 때는 재구매 가격이 적용돼요.
             </p>
             <p className="font-['Pretendard'] text-[12px] leading-relaxed break-keep text-white/40">
               ※ 배송되는 실물 부적은 이미지 부적과 달라요. 사주와 고민을 보고 그에 맞게 직접 그려서 보내 드려요.
