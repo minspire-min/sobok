@@ -2,7 +2,7 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 버전 | v2 초안 (2026-11-15) — 생성: `node scripts/build-talisman-matrix.mjs` |
+| 버전 | v2 초안 (2026-11-26) — 생성: `node scripts/build-talisman-matrix.mjs` |
 | 구성 | 하위 고민 40 × 오행 5 = 200칸, 칸당 5개(1번 = 퍼스널 추천) |
 | 성어 | 225종 = 기존 120 + 신규 105 |
 | ⚠️ 검수 | **신규(✦) 성어 전부**, 특히 `(미확실)` 표시는 사전 대조 필수(PRD §8.5). 수정은 `scripts/talisman-pool.mjs`에서 고친 뒤 스크립트 재실행 |
