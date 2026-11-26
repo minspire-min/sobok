@@ -4,9 +4,9 @@
 
 > **우리 서비스의 콜백 주소** (아래에서 계속 쓰입니다 — 복사해 두세요)
 > ```
-> https://yrgsrvncaapwzvwczqyi.supabase.co/auth/v1/callback
+> https://rewrelalnoylldzfocrr.supabase.co/auth/v1/callback
 > ```
-> **Supabase 대시보드**: https://supabase.com/dashboard/project/yrgsrvncaapwzvwczqyi
+> **Supabase 대시보드**: https://supabase.com/dashboard/project/rewrelalnoylldzfocrr
 
 ---
 
